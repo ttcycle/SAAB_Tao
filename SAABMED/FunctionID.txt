@@ -1,0 +1,13 @@
+//Note: the asterick (*) indicates having a sub menu
+--Select Function ID---
+*Generic Unit
+*Air Defence
+*Air Defence Missle
+*Armour
+*Aviation
+*Infantry
+*Reconnaissance
+*Signals
+*Supply
+*Transport
+*Medical

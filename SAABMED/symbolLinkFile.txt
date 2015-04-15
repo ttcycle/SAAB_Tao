@@ -1,0 +1,56 @@
+Land,G
+Sea,S
+Air,A
+Australia,AS
+New Zealand,NZ
+United States,US
+United Kingdom,UK
+Canada,CA
+Generic Unit,U-----
+Air Defence,UCD---
+Air Defence Missle,UCDM--
+Armour,UCA---
+Aviation,UCV---
+Infantry,UCI---
+Reconnaissance,UCR---
+Signals,UUS---
+Supply,USS---
+Transport,UST---
+Medical,USM---
+Ground OB,G
+Civilian OB,C
+Maritime OB,N
+Friendly,F
+Hostile,H
+Unknown,Z
+Neutral,N
+Suspend,S
+Assumed Friendly,A
+Present,P
+Present/Fully Capable,C
+Anticipated/Planned,A
+Damaged,D
+Destroyed,X
+Full to Capacity,F
+Null,--
+Team/Crew,-A
+Squad,-B
+Section,-C
+Platoon/Detachment,-D
+Company/Battery/Troop,-E
+Battalion/Squadron,-F
+Regiment/Group,-G
+Brigade,-H
+Division,-I
+Corps/Mef,-J
+Headquarters(HQ),A-
+HQ Team/Crew,AA
+HQ Squad,AB
+HQ Section,AC
+HQ Platoon/Detachment,AD
+HQ Company/Battery/Troop,AE
+HQ Battalion/Squadron,AF
+HQ Regiment/Group,AG
+HQ Brigade,AH
+HQ Division,AI
+HQ Corps/Mef,AJ

@@ -1,0 +1,9 @@
+//Note: the asterisk (*) indicates having a sub menu
+// use slash (/) to exclude some menus for displaying
+--Select Status Condition--
+*Present
+*Present/Fully Capable
+*Anticipated/Planned
+*Damaged
+*Destroyed
+*Full to Capacity

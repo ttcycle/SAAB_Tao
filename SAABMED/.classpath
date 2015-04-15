@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
+	<classpathentry kind="lib" path="D:/Shared/World Wind/gdal.jar"/>
+	<classpathentry kind="lib" path="D:/Shared/World Wind/gluegen-rt.jar"/>
+	<classpathentry kind="lib" path="D:/Shared/World Wind/jogl-all.jar"/>
+	<classpathentry kind="lib" path="D:/Shared/World Wind/plugin.jar"/>
+	<classpathentry kind="lib" path="D:/Shared/World Wind/vpf-symbols.jar"/>
+	<classpathentry kind="lib" path="D:/Shared/World Wind/worldwind.jar"/>
+	<classpathentry kind="lib" path="D:/Shared/World Wind/worldwindx.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

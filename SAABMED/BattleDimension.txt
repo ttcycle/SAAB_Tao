@@ -1,0 +1,5 @@
+//Note: the asterisk (*) indicates having a sub menu
+--Select Battle Dimension--
+*Land
+//*Sea
+//*Air

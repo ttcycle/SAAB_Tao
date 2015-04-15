@@ -1,0 +1,24 @@
+//Note: the asterick (*) indicates having a sub menu
+--Select Symbol Modifier--
+*Null
+*Team/Crew
+*Squad
+*Section
+*Platoon/Detachment
+*Company/Battery/Troop
+*Battalion/Squadron
+*Regiment/Group
+*Brigade
+*Division
+*Corps/Mef
+*Headquarters(HQ)
+*HQ Team/Crew
+*HQ Squad
+*HQ Section
+*HQ Platoon/Detachment
+*HQ Company/Battery/Troop
+*HQ Battalion/Squadron
+*HQ Regiment/Group
+*HQ Brigade
+*HQ Division
+*HQ Corps/Mef

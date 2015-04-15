@@ -1,0 +1,8 @@
+//Note: the asterisk (*) indicates having a sub menu
+---Select Standard Identity---
+*Friendly
+*Hostile
+//*Unknown
+*Neutral
+*Suspend
+*Assumed Friendly
