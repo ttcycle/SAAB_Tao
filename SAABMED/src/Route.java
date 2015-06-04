@@ -11,6 +11,7 @@ public class Route {
 	private ArrayList<Position> pathCoords;
 	private double lat;
 	private double lon;
+	private double length;
 	
 	public Route()
 	{
@@ -18,14 +19,17 @@ public class Route {
 		this.setPathCoords(new ArrayList<Position>());
 		this.setLat(0.00);
 		this.setLon(0.00);
+		this.setLength(0.00);
 	}
-	
+
+
 	public Route(String pathName, ArrayList<Position> pathCoords, double lat, double lon)
 	{
 		this.setPathName(pathName);
 		this.setPathCoords(pathCoords);
 		this.setLat(lat);
 		this.setLon(lon);
+		//this.setLength(length);
 	}
 
 	public String getPathName() {
@@ -58,5 +62,10 @@ public class Route {
 
 	public void setLon(double lon) {
 		this.lon = lon;
+	}
+	
+	private void setLength(double length) {
+		this.length = length;
+		
 	}
 }
