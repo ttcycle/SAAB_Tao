@@ -9,6 +9,7 @@ public class MecialSymbology {
 	private String comments;
 	private String urgency;
 	
+	
 	public MecialSymbology()
 	{
 		this.setSpecialities(new ArrayList<Specialty>());

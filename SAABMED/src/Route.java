@@ -1,6 +1,7 @@
 
 
 import gov.nasa.worldwind.geom.Position;
+import gov.nasa.worldwind.render.Polyline;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
@@ -22,7 +23,11 @@ public class Route {
 		this.setLength(0.00);
 	}
 
-
+	public Route(Polyline pathCoords) {
+		ArrayList<Position> newCoords = (ArrayList<Position>) pathCoords.getPositions();
+		this.pathCoords = newCoords;
+	}
+	
 	public Route(String pathName, ArrayList<Position> pathCoords, double lat, double lon)
 	{
 		this.setPathName(pathName);

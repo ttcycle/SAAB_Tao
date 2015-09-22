@@ -12,6 +12,7 @@ public class AO {
 	private String opName;
 	private String classification;
 	private String Comments;
+	private int pos;
 	
 	public AO()
 	{
@@ -24,7 +25,13 @@ public class AO {
 		this.setComments("");
 	}
 	
-	public AO(String aoID, double lat, double lon, ArrayList<Point2D> aoCoords, String opName, String classification, String comments)
+	public AO(String aoID, ArrayList<Point2D> aoCoords, String opName) {
+		this.setAoID(aoID);
+		this.setAoCoords(aoCoords);
+		this.setOpName(opName);
+	}
+	
+	public AO(String aoID, double lat, double lon, ArrayList<Point2D> aoCoords, String opName, String classification, String comments, int pos)
 	{
 		this.setAoID(aoID);	
 		this.setLat(lat);
@@ -33,8 +40,17 @@ public class AO {
 		this.setOpName(opName);
 		this.setClassification(classification);
 		this.setComments(comments);
+		this.setPos(pos);
 	}
 
+	public int getPos() {
+		return pos;
+	}
+	
+	public void setPos(int pos) {
+		this.pos = pos;
+	}
+	
 	public String getAoID() {
 		return aoID;
 	}

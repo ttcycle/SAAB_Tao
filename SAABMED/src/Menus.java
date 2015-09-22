@@ -10,22 +10,14 @@
 //Necessary worldwind imports
 import gov.nasa.worldwind.BasicModel;
 import gov.nasa.worldwind.awt.WorldWindowGLJPanel;
+import gov.nasa.worldwind.geom.Angle;
+import gov.nasa.worldwind.geom.Line;
 import gov.nasa.worldwind.geom.Position;
+import gov.nasa.worldwind.geom.Vec4;
+import gov.nasa.worldwind.util.measure.LengthMeasurer;
 import gov.nasa.worldwind.util.measure.MeasureTool;
 import gov.nasa.worldwind.util.measure.MeasureToolController;
 
-
-
-
-
-
-
-//Necessary awt imports
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Container;
-import java.awt.FlowLayout;
-import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -35,20 +27,22 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
+import java.awt.geom.Point2D;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-
-
-
-
-
-
+import java.util.Spliterator;
 
 //Necessary swing imports
 import javax.swing.BorderFactory;
@@ -56,6 +50,7 @@ import javax.swing.DefaultListSelectionModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -63,6 +58,7 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
@@ -70,6 +66,7 @@ import javax.swing.JTextField;
 import javax.swing.MenuElement;
 import javax.swing.MenuSelectionManager;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.border.CompoundBorder;
@@ -82,6 +79,24 @@ import javax.swing.event.ListSelectionListener;
 //import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils.Text;
 
 
+
+
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
+import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.w3c.dom.Attr;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
 import gov.nasa.worldwind.avlist.AVKey;
 import gov.nasa.worldwind.layers.AnnotationLayer;
 import gov.nasa.worldwind.layers.LatLonGraticuleLayer;
@@ -92,6 +107,7 @@ import gov.nasa.worldwind.layers.ViewControlsSelectListener;
 import gov.nasa.worldwind.render.*;
 import gov.nasa.worldwind.symbology.*;
 import gov.nasa.worldwind.symbology.milstd2525.*;
+import gov.nasa.worldwind.terrain.HighResolutionTerrain;
 import gov.nasa.worldwind.util.BasicDragger;
 import gov.nasa.worldwind.util.UnitsFormat;
 import gov.nasa.worldwind.util.WWUtil;
@@ -100,6 +116,7 @@ import gov.nasa.worldwind.WorldWind;
 import gov.nasa.worldwind.layers.Earth.MGRSGraticuleLayer;
 import gov.nasa.worldwind.render.Path;
 
+//Necessary awt imports
 import java.awt.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -108,6 +125,7 @@ import java.beans.PropertyChangeListener;
 public class Menus implements ActionListener, ItemListener {
 
     //Begin with variables
+	private static SplashScreen splash;
     private String newline = "\n";
     public static String selectedMenuPath = "";
     public static String selectedMenuPath2 = "";
@@ -127,7 +145,7 @@ public class Menus implements ActionListener, ItemListener {
     private static JLabel latLabel = new JLabel();
     private static JLabel lonLabel = new JLabel();
     private static Map<String, String> map;
-    
+    protected HighResolutionTerrain terrain;
     private static RenderableLayer routelayer;
     private static AnnotationLayer annotationlayer;
 
@@ -139,6 +157,9 @@ public class Menus implements ActionListener, ItemListener {
     private static LineBuilder lineBuilder;
     JPanel outerPanel = null;
 
+    private static int AOcount = 0;
+    private static int AOstatus = 0;
+    
     //Timer used to update path menu, smaller number increases responsiveness and increases cpu requirements
     private final static int ONE_SECOND = 1000;
 
@@ -175,7 +196,7 @@ public class Menus implements ActionListener, ItemListener {
      * @param radius
      */
     private static void placeGeoZone(double lat, double lon, double radius) {
-        //Place an ellispoid at the input location with the input radius
+        //Place an ellipsoid at the input location with the input radius
         ShapeAttributes attrs = new BasicShapeAttributes();
         //Can eventually input the colour into this method header to change the colour depending on hostility
         attrs.setInteriorMaterial(Material.RED);
@@ -186,7 +207,7 @@ public class Menus implements ActionListener, ItemListener {
         attrs.setDrawInterior(true);
         attrs.setDrawOutline(false);
 
-                //Create the layer for the geozone
+        //Create the layer for the geozone
         //BUG: Only one Geo Zone can be on a layer with the same name so this breaks the layer toggle feature only toggling one of the Geo Zones
         RenderableLayer layer = new RenderableLayer();
         layer.setName("GeoZone Layer");
@@ -196,16 +217,21 @@ public class Menus implements ActionListener, ItemListener {
         sphere.setVisible(true);
         layer.addRenderable(sphere);
 
+
+        
         //Add the layer to the World wind model
         wwd.getModel().getLayers().add(layer);
         wwd.updateUI();
     }
 
-    /** Setup a basic square AO using two corner positions
+
+
+
+	/** Setup a basic square AO using two corner positions
      * 
      * @param positions
      */
-    private static void addBasicAO(List<Position> positions) {
+    private static int addBasicAO(List<Position> positions) {
         //Setup AO layer
         //BUG: Only one AO can be on a layer with the same name so this breaks the layer toggle feature only toggling one of the AO
         RenderableLayer layer = new RenderableLayer();
@@ -222,8 +248,9 @@ public class Menus implements ActionListener, ItemListener {
         path.setPathType(AVKey.GREAT_CIRCLE);
         path.setExtrude(true);
         path.setPathType(AVKey.RHUMB_LINE);
-
-        //Ao colour can be changed using the below attributes, currently set to random
+        
+        
+        //AO colour can be changed using the below attributes, currently set to random
         attrs = new BasicShapeAttributes();
         attrs.setOutlineMaterial(new Material(WWUtil.makeRandomColor(null)));
         attrs.setInteriorMaterial(new Material(WWUtil.makeRandomColor(null)));
@@ -234,20 +261,22 @@ public class Menus implements ActionListener, ItemListener {
         //Add AO to World Wind model
         wwd.getModel().getLayers().add(layer);
         wwd.updateUI();
+        return wwd.getModel().getLayers().indexOf(layer, 0);
     }
 
-    /** Create path layer
+    /** Method for creating a route/path
      * 
      * @param positions
      */
-  
-    private static void addBasicPath(List<Position> positions) {
+      private static void addBasicPath(List<Position> positions) {
         //BUG: Only one path can be on a layer with the same name so this breaks the layer toggle feature only toggling one of the path
         RenderableLayer layer = new RenderableLayer();
         layer.setName("Route Layer");
         //Path path = new Path(positions);
      
         Polyline path = new Polyline(positions, 300);
+
+        /** OLD METHOD - Didn't allow for measuring
         //Create and set an attribute bundle.
         //Colour and width can be changed her
         //ShapeAttributes attrs = new BasicShapeAttributes();
@@ -258,24 +287,29 @@ public class Menus implements ActionListener, ItemListener {
         //path.setVisible(true);
         //path.setAltitudeMode(WorldWind.RELATIVE_TO_GROUND);
         //path.setPathType(AVKey.RHUMB_LINE);
+        */
         
 		MeasureTool measure = new MeasureTool(wwd);
+
 		
 		measure.setController(new MeasureToolController());
 		measure.getUnitsFormat().setLengthUnits(UnitsFormat.KILOMETERS);
 		
 		//this flag will be false for air travel
-		measure.setFollowTerrain(true);
+		//measure.setFollowTerrain(true);
 		
 		//path.setOffset(arg0);
         path.setColor(Color.RED);
         path.setLineWidth(100);
-
+        path.setFollowTerrain(true);
+        
         measure.setMeasureShape(path);
-        System.out.println("Route Length : " + measure.getLength()/1000 + "km");
+
         
         //layer.addRenderable(path);
 
+        //addObjectToAddedList("New Route", path);
+        
         //Add path to world wind model
         wwd.getModel().getLayers().add(layer);
         wwd.updateUI();
@@ -295,8 +329,8 @@ public class Menus implements ActionListener, ItemListener {
                 menuLevel4 = null,
                 menuLevel5 = null,
                 menuLevel6 = null,
-                menuLevel7 = null;
-
+                menuLevel7 = null,
+        		menuLevel8 = null;
         // Create the menu bar.
         menuBar = new JMenuBar();
 
@@ -313,7 +347,11 @@ public class Menus implements ActionListener, ItemListener {
         String[] symbolModifier = openMenusTxt("SymbolModifier.txt");
         String[] country = openMenusTxt("Country.txt");
         String[] orderOfBattle = openMenusTxt("OrderOfBattle.txt");
+        String[] airspaceTypes = openMenusTxt("AirspaceTypes.txt");
+        
+        
 
+        
         // Building the menus and submenus from text files
         for (int i = 0; i < mainMenu.length; i++) {
             if (mainMenu[i].substring(0, 1).toString().equals("*")) {
@@ -371,7 +409,7 @@ public class Menus implements ActionListener, ItemListener {
                     else {addNonSubMenuItem(menuLevel1, standardIdentity[j].toString());
                     }
                 }
-            } 
+            }
             else {
                 JMenuItem item = new JMenuItem(mainMenu[i].toString());
                 item.addActionListener(this);
@@ -379,6 +417,20 @@ public class Menus implements ActionListener, ItemListener {
             }
         }
 
+        //Add Airspace Menu Selectors
+        JMenu airSpace = new JMenu("Air Space");
+        //menuitems
+        JMenuItem airspaceCylinder = new JMenuItem("Cylinder");
+        JMenuItem airspaceCube = new JMenuItem("Cube");
+        airspaceCylinder.addActionListener(this);
+        airspaceCube.addActionListener(this);
+        
+        airSpace.add(airspaceCube);
+        airSpace.add(airspaceCylinder);
+        
+        menuSelect.add(airSpace);
+        
+        
         //Add separator
         ((JMenu) menuSelect).addSeparator();
         //Add Exit option
@@ -432,7 +484,7 @@ public class Menus implements ActionListener, ItemListener {
             //Note: this can be used for a more advanced form of ao or path creation
             //makePanel("AO", new Dimension(200,400));
             placingType = 2;
-
+            createAnnotation("AO Selected - Presse Enter to Finish Placing Area");
         }
         // Geo Zone
         if (e.getActionCommand().toString().endsWith("Geo Zone")) {
@@ -515,8 +567,7 @@ public class Menus implements ActionListener, ItemListener {
      * @param string
      */
     private void createAnnotation(String string) {
-		// TODO Auto-generated method stub
-    	
+
 		//clear annotation layer first.
     	this.annotationlayer.removeAllAnnotations();
     	
@@ -572,6 +623,10 @@ public class Menus implements ActionListener, ItemListener {
     }
 
     //Sets up the left side of the screen
+    /** Method for creating the left-hand-side panel for the object list and checkboxes
+     * 
+     * @return
+     */
     private static JSplitPane createLeftPanel() {
         //Note this can be modified to include colapseable buttons
         JSplitPane panel = new JSplitPane();
@@ -591,6 +646,43 @@ public class Menus implements ActionListener, ItemListener {
         addedObjectsList.setPreferredSize(new Dimension(190, 500));
         addedObjectsList.setListData(addedObjectArray);
 
+        
+        //creates delete right-click context menu
+		final JPopupMenu menu = new JPopupMenu();
+		JMenuItem delete = new JMenuItem("Delete");
+		menu.add(delete);
+
+		addedObjectsList.addMouseListener(new MouseAdapter() {
+			public void mouseClicked(MouseEvent me) {
+				if (SwingUtilities.isRightMouseButton(me) && !addedObjectsList.isSelectionEmpty() && addedObjectsList.locationToIndex(me.getPoint()) == addedObjectsList.getSelectedIndex()) {
+					menu.show(addedObjectsList, me.getX(), me.getY());
+				}
+			}
+		});
+
+		delete.addActionListener(new ActionListener() {
+
+			//Removes item from addedobjectsarray - jlist (addedobjectslist) is updated also
+			//TODO: remove item that's drawn on map also.
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				ArrayList<CreatedObject> copyList = new ArrayList<CreatedObject>(Arrays.asList(addedObjectArray));
+				copyList.remove(addedObjectsList.getSelectedValue());
+				copyList.toArray(addedObjectArray);
+				
+				System.out.println("Removed Object from Object List");
+				
+				addedObjectsList.setSelectedIndex(-1);
+				
+				addedObjectsList.setListData(addedObjectArray);
+				
+				addedObjectsList.revalidate();
+				addedObjectsList.repaint();
+			}
+			
+		});
+		
+		
         JScrollPane scrollPane2 = new JScrollPane();
         scrollPane2.setViewportView(addedObjectsList);
         scrollPane2.setPreferredSize(new Dimension(200, 550));
@@ -616,8 +708,10 @@ public class Menus implements ActionListener, ItemListener {
         //Add bottom panel content			
         JScrollPane scrollPane = new JScrollPane();
         scrollPane.setPreferredSize(new Dimension(190, 280));
-	//Creates the checkboxes for layer managment
-        //Could potentially be swapped for world winds layer managment if layers are setup correctly
+        
+        
+        //Creates the checkboxes for layer management
+        //Could potentially be swapped for world winds layer management if layers are setup correctly
         JCheckBox pathsCheckBox = new JCheckBox();
         pathsCheckBox.setPreferredSize(new Dimension(200, 25));
         pathsCheckBox.setText("Paths");
@@ -735,7 +829,7 @@ public class Menus implements ActionListener, ItemListener {
     }
 
     //The next few methods setup java swing components for a selected object to be placed on the right panel
-    //Bug: Detail views apply buttons update the data stored about each of the objects however they do not update any features on the map
+    //TODO: Detail views apply buttons update the data stored about each of the objects however they do not update any features on the map
     private static void createAODetails(final AO ao) {
         JPanel panel = new JPanel();
         panel.setPreferredSize(new Dimension(300, 800));
@@ -758,11 +852,19 @@ public class Menus implements ActionListener, ItemListener {
         classificationTextField.setPreferredSize(new Dimension(150, 25));
         classificationTextField.setText(ao.getClassification());
 
-        JLabel commentsLabel = new JLabel("Comments");
+        JLabel commentsLabel = new JLabel("Points(Lat,Lon)");
         final JTextArea commentsTextArea = new JTextArea();
         commentsTextArea.setPreferredSize(new Dimension(280, 150));
-        commentsTextArea.setText(ao.getComments());
+        for(int i = 0; i<ao.getAoCoords().size()-1;i++){
+        	Point2D item = ao.getAoCoords().get(i);
+        	if(i==0){
+        		commentsTextArea.setText(commentsTextArea.getText()+"Point"+i+" "+item.getX()+" "+item.getY());
+        	}
+        	else
+        		commentsTextArea.setText(commentsTextArea.getText()+"\nPoint"+i+" "+item.getX()+" "+item.getY());
+        }
 
+        /*
         JLabel aoPoint1Label = new JLabel("NW Corner Point");
         aoPoint1Label.setPreferredSize(new Dimension(100, 25));
         final JTextField latTextField = new JTextField();
@@ -776,7 +878,8 @@ public class Menus implements ActionListener, ItemListener {
         lat2TextField.setPreferredSize(new Dimension(50, 25));
         final JTextField lon2TextField = new JTextField();
         lon2TextField.setPreferredSize(new Dimension(50, 25));
-
+*/
+        
         JButton applyButton = new JButton();
         applyButton.setText("Apply");
         applyButton.setPreferredSize(new Dimension(300, 25));
@@ -788,11 +891,56 @@ public class Menus implements ActionListener, ItemListener {
                 tempAo.setAoID(aoIDTextField.getText());
                 tempAo.setOpName(opNameTextField.getText());
                 tempAo.setClassification(classificationTextField.getText());
+                
+                String temp = commentsTextArea.getText();
+                System.out.println(temp);
+                
+                
                 tempAo.setComments(commentsTextArea.getText());
-		
+                //List<String> newPoints= new ArrayList<String>();
+                String lines[] = temp.split("\\r?\\n");
+                ArrayList<Point2D> tempAOpath = new ArrayList<Point2D>();
+                ArrayList<Position> tempP = new ArrayList<Position>();
+                
+                int count=0;
+                
+                Point2D tail = null;
+                Position tailP = null;
+                Angle Lat = null;
+                Angle Lon = null;
+                
+                
+                for(String item : lines){
+            
+                	Point2D temp2D;
+                	Position tempPP;
+                	
+                	String coors[] = item.split(" ");
+                	System.out.println(coors.length+"hey i am here");
+                	if(count == 0){
+                		tail = new Point2D.Double(Double.parseDouble(coors[1]),Double.parseDouble(coors[2]));
+                		tailP = new Position(Lat.fromDegrees(Double.parseDouble(coors[1])),Lon.fromDegrees(Double.parseDouble(coors[2])),1e4);
+                	}
+                	tempPP = new Position(Lat.fromDegrees(Double.parseDouble(coors[1])),Lon.fromDegrees(Double.parseDouble(coors[2])),1e4);
+                	temp2D = new Point2D.Double(Double.parseDouble(coors[1]),Double.parseDouble(coors[2]));
+                	
+                	tempAOpath.add(temp2D);
+                	tempP.add(tempPP);
+                	count++;
+                }
+                
+                tempAOpath.add(tail);
+                tempP.add(tailP);
+                tempAo.setAoCoords(tempAOpath);
+                
+                
                 //New ao coords
+                //broken_text = line.split(" ");
                 CreatedObject newCO = new CreatedObject(addedObjectArray[addedObjectsList.getSelectedIndex()].getObjectType(), tempAo);
                 replaceObjectInAddedList(addedObjectsList.getSelectedIndex(), newCO);
+                //addedObjectArray[addedObjectsList.getSelectedIndex()].getAo().setAoCoords(tempAOpath);
+                wwd.getModel().getLayers().remove(tempAo.getPos());
+                addBasicAO(tempP);
             }
         });
 
@@ -805,12 +953,14 @@ public class Menus implements ActionListener, ItemListener {
         panel.add(classificationTextField);
         panel.add(commentsLabel);
         panel.add(commentsTextArea);
+        /*
         panel.add(aoPoint1Label);
         panel.add(latTextField);
         panel.add(lonTextField);
         panel.add(aoPoint2Label);
         panel.add(lat2TextField);
         panel.add(lon2TextField);
+        */
         panel.add(applyButton);
         
         masterFrame.remove(rightMasterPanel);
@@ -867,6 +1017,7 @@ public class Menus implements ActionListener, ItemListener {
 
         JLabel geoZoneLabel = new JLabel("Geo Zone");
         geoZoneLabel.setPreferredSize(new Dimension(300, 25));
+        geoZoneLabel.setHorizontalTextPosition(JLabel.CENTER);
         JLabel geoZoneIDLabel = new JLabel("Geo Zone ID");
         geoZoneIDLabel.setPreferredSize(new Dimension(100, 25));
         final JTextField geoZoneIDTextField = new JTextField();
@@ -885,6 +1036,8 @@ public class Menus implements ActionListener, ItemListener {
         JButton geoZoneAddButton = new JButton();
         geoZoneAddButton.setText("Add Geo Zone");
         geoZoneAddButton.setPreferredSize(new Dimension(300, 25));
+        
+        
         geoZoneAddButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent arg0) {
                 GeoZone tempGeoZone = new GeoZone(geoZoneIDTextField.getText(), geoZoneTypeTextField.getText(), genericSymbology.getPosition(), Double.parseDouble(geoZoneRadiusTextField.getText()));
@@ -987,7 +1140,98 @@ public class Menus implements ActionListener, ItemListener {
         aoPoint2Label.setPreferredSize(new Dimension(75, 25));
         final JTextField lonTextField = new JTextField();
         lonTextField.setPreferredSize(new Dimension(50, 25));
+        latTextField.setText(medicalSymbbology.getSymbol().getPosition().getLatitude().toString());
+        lonTextField.setText(medicalSymbbology.getSymbol().getPosition().getLongitude().toString());
+        
+        
+        //export button + actionlistener
+        JButton exportButton = new JButton();
+        exportButton.setText("Export Metadata");
+        exportButton.setPreferredSize(new Dimension(300, 25));
+        exportButton.addActionListener(new ActionListener() {
 
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				
+				OutputStream fs = null;
+				FileWriter fw;
+				String xmlContent = "";
+				try {
+					//for building xml document
+					DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+					DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
+					
+					Document doc = docBuilder.newDocument();
+					
+					//facility root element
+					Element rootElement = doc.createElement("facility");
+					doc.appendChild(rootElement);
+					
+					
+					//role
+					Attr attr = doc.createAttribute("id");
+					attr.setValue("1");
+					Element role = doc.createElement("role");
+					role.setAttributeNode(attr);
+					rootElement.appendChild(role);
+					
+					Element name = doc.createElement("name");
+					//TODO: Fix this to match Dennis' requests for structure and field(s)
+					name.appendChild(doc.createTextNode(medicalSymbbology.getSymbol().getCodeName()));
+					role.appendChild(name);
+					
+					//for transforming document to xml format
+					TransformerFactory transFactory = TransformerFactory.newInstance();
+					Transformer transformer = transFactory.newTransformer();
+					transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+					DOMSource source = new DOMSource(doc);
+					//StreamResult result = new StreamResult(new File("file.xml"));
+					StreamResult result = new StreamResult();
+					
+					System.out.println(fs.toString());
+					transformer.transform(source, result);
+					//xmlContent = result.getOutputStream().toString();
+					
+
+				} catch (Exception e){
+					e.printStackTrace();
+				}
+		
+				
+				
+				
+				//specifies file filter to save as xml file only
+				FileFilter filter = new FileNameExtensionFilter("XML File", "xml");
+				
+				//creates file chooser object for saving xml file when exporting
+				JFileChooser saveChooser = new JFileChooser();
+				saveChooser.setDialogTitle("Specify Save Location");
+				saveChooser.setFileFilter(filter);
+				//saveChooser.setSelectedFile(xmlFile);
+				
+				//user selection as integer
+				int userSelection = saveChooser.showSaveDialog(masterFrame);
+				
+				if (userSelection == JFileChooser.APPROVE_OPTION) {
+					File fileToSave = saveChooser.getSelectedFile();
+					
+					try {
+						fw = new FileWriter(fileToSave.getAbsolutePath());
+						fw.write(xmlContent.toString());
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					
+					
+					System.out.println("Save as file: " + fileToSave.getAbsolutePath());
+				}
+				
+			}
+        	
+        });
+        
+        //apply button + action listener
+        //TODO: get this to update details rather than copy instance of symbol
         JButton applyButton = new JButton();
         applyButton.setText("Apply");
         applyButton.setPreferredSize(new Dimension(300, 25));
@@ -1024,7 +1268,9 @@ public class Menus implements ActionListener, ItemListener {
         panel.add(latTextField);
         panel.add(aoPoint2Label);
         panel.add(lonTextField);
+        panel.add(exportButton);
         panel.add(applyButton);
+        
         
         masterFrame.remove(rightMasterPanel);
         rightMasterPanel = new JPanel();
@@ -1211,6 +1457,10 @@ public class Menus implements ActionListener, ItemListener {
         masterFrame.revalidate();
     }
 
+    /** Method for generating and populating right-hand panel for route selected in left-hand panel
+     * 
+     * @param route
+     */
     //Method for populating right panel with details for selected route
     private static void createRouteDetails(final Route route) {
         JPanel panel = new JPanel();
@@ -1222,12 +1472,17 @@ public class Menus implements ActionListener, ItemListener {
         pathNameTextField.setPreferredSize(new Dimension(150, 25));
         pathNameTextField.setText(route.getPathName());
 
+        
+        //copies positions from current route into array of positions
         final Position[] p = new Position[route.getPathCoords().size()];
         int i = 0;
         for (Position position : route.getPathCoords()) {
             p[i] = route.getPathCoords().get(i);
             i++;
         }
+        
+        
+        
         final JTextField latTextField = new JTextField();
         latTextField.setPreferredSize(new Dimension(140, 25));
         final JTextField lonTextField = new JTextField();
@@ -1254,11 +1509,15 @@ public class Menus implements ActionListener, ItemListener {
         applyButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+            	
                 System.out.println("Apply Pressed");
                 Route tempRoute = addedObjectArray[addedObjectsList.getSelectedIndex()].getRoute();
                 tempRoute.setPathName(pathNameTextField.getText());
-
-                p[routePointsList.getSelectedIndex()] = Position.fromDegrees(Double.parseDouble(latTextField.getText()), Double.parseDouble(lonTextField.getText()), p[routePointsList.getSelectedIndex()].getAltitude());
+                //TODO: fix this from making a "NEW" route
+                /**
+                 * Idea: delete old route on clicking apply
+                 */
+                p[routePointsList.getSelectedIndex()] = Position.fromDegrees(Double.parseDouble(latTextField.getText().replace("°", "")), Double.parseDouble(lonTextField.getText().replace("°", "")), p[routePointsList.getSelectedIndex()].getAltitude());
                 routePointsList.setListData(p);
                 ArrayList<Position> tp = new ArrayList<Position>();
                 for (Position position : p) {
@@ -1266,13 +1525,18 @@ public class Menus implements ActionListener, ItemListener {
                 }
                 tempRoute.setPathCoords(tp);
 
+                
+                //TODO: Instead of copying route - call setPathCoords() with new Coords. :)
+                
+                
                 //New path
                 CreatedObject newCO = new CreatedObject(addedObjectArray[addedObjectsList.getSelectedIndex()].getObjectType(), route);
                 replaceObjectInAddedList(addedObjectsList.getSelectedIndex(), newCO);
 
-		//New route
+                //New route
                 //Adds a modified route to the map
                 System.out.println("Added new route");
+                
                 Route newRoute = new Route("New Path", tp, 0, 0);
                 addBasicPath(newRoute.getPathCoords());
                 pathPositions = new ArrayList<Position>();
@@ -1280,14 +1544,19 @@ public class Menus implements ActionListener, ItemListener {
             }
         });
 
-        //route length
         
+        //create jlabel for displaying overall length of route
+        LengthMeasurer lm = new LengthMeasurer(route.getPathCoords());
+        double rl = (lm.getLength(wwd.getModel().getGlobe()) / 1000);
+        DecimalFormat df = new DecimalFormat("#.00");
+        JLabel routeLengthLabel = new JLabel("Route Length : " + df.format(rl).toString() + "km");
         
         panel.add(pathNameLabel);
         panel.add(pathNameTextField);
         panel.add(routePointsList);
         panel.add(latTextField);
         panel.add(lonTextField);
+        panel.add(routeLengthLabel);
         panel.add(applyButton);
         
         masterFrame.remove(rightMasterPanel);
@@ -1427,7 +1696,9 @@ public class Menus implements ActionListener, ItemListener {
         masterFrame.getContentPane().add(wwd, java.awt.BorderLayout.CENTER);
         wwd.setModel(new BasicModel());
 
-
+        
+        splash.addRenderingListener(wwd);
+                
         //Annotation Layer
         annotationlayer = new AnnotationLayer();
         wwd.getModel().getLayers().add(annotationlayer);
@@ -1466,6 +1737,7 @@ public class Menus implements ActionListener, ItemListener {
 
         masterFrame.setVisible(true);
         masterFrame.pack();
+        masterFrame.setLocationRelativeTo(null);
 
         try {
             wwd.addSelectListener(new BasicDragger(wwd));
@@ -1486,9 +1758,62 @@ public class Menus implements ActionListener, ItemListener {
                             placingType = 0;
                         }
                         System.out.println("Pressed");
+                        
+                      //Tao's part 
+                        if (placingType == 2) {
+                        	System.out.println("enter for AO pressed");
+							if(pathPositions.size() > 2){
+								AOcount++;
+								pathPositions.add(Position.fromDegrees(
+										pathPositions.get(0).getLatitude()
+												.getDegrees(), pathPositions.get(0)
+												.getLongitude().getDegrees(), 1e4));
+								int layerpos = addBasicAO(pathPositions);
+								
+								ArrayList<Point2D> temp = new ArrayList<Point2D>();
+								Point2D temp2D;
+								for(int i = 0; i<pathPositions.size();i++){
+									temp2D =  new Point2D.Double(pathPositions.get(i).getLatitude().getDegrees(),pathPositions.get(i).getLongitude().getDegrees());
+									temp.add(i, temp2D);
+									//temp2D = new Point2D(pathPositions.get(i).getLatitude().getDegrees(),pathPositions.get(i).getLatitude().getDegrees());
+									//Point2D tempPoint = new Point2D(pathPositions.get(i).getLatitude().getDegrees(),pathPositions.get(i).getLongitude().getDegrees());
+									
+									//temp.add(pathPositions.get(i).getLatitude(),pathPositions.get(i).getLongitude());
+								}
+								String AOname = "New AO " + AOcount;
+								AO ao = new AO(AOname, 0, 0,temp , "New AO", "", "",layerpos);
+								addObjectToAddedList("AO", ao);
+								
+								/*
+								for(int i = 0; i<ao.getAoCoords().size();i++){
+									System.out.println("here is the pos");
+									System.out.println(ao.getAoCoords().get(i).getX());
+
+									System.out.println(ao.getAoCoords().get(i).getY());
+									
+									//temp2D = new Point2D(pathPositions.get(i).getLatitude().getDegrees(),pathPositions.get(i).getLatitude().getDegrees());
+									//Point2D tempPoint = new Point2D(pathPositions.get(i).getLatitude().getDegrees(),pathPositions.get(i).getLongitude().getDegrees());
+									
+									//temp.add(pathPositions.get(i).getLatitude(),pathPositions.get(i).getLongitude());
+								}
+								*/
+								pathPositions = new ArrayList<Position>();
+								placingType = 0;
+								System.out.println("Done with choosing ao");
+								annotationlayer.removeAllAnnotations();
+							}
+						}
+                        else
+                        	pathPositions = new ArrayList<Position>();//empty the array if points are not >2
+                   
                     }
+                        
                 }
             });
+            
+            
+            
+            
             //This will consume mouse events while placing objects onto the map so that the map doesn't move with a single click
             wwd.getInputHandler().addMouseListener(new MouseAdapter() {
                 public void mouseClicked(MouseEvent mouseEvent) {
@@ -1562,29 +1887,23 @@ public class Menus implements ActionListener, ItemListener {
                     } 
                     // Create and place ao class
                     else if (placingType == 2) {
-                        // First corner
-                        if (pathPositions.size() == 0) {
-                            // Reset array
-                            pathPositions = new ArrayList<Position>();
-                            pathPositions.add(Position.fromDegrees(latitude, longitude, 1e4));
-                            System.out.println("Adding First Point");
-                        } // Other 3
-                        else if (pathPositions.size() == 1) {
-                            pathPositions.add(Position.fromDegrees(pathPositions.get(0).getLatitude().getDegrees(), longitude, 1e4));
-                            pathPositions.add(Position.fromDegrees(latitude, longitude, 1e4));
-                            pathPositions.add(Position.fromDegrees(latitude, pathPositions.get(0).getLongitude().getDegrees(), 1e4));
-                            pathPositions.add(Position.fromDegrees(pathPositions.get(0).getLatitude().getDegrees(), pathPositions.get(0).getLongitude().getDegrees(), 1e4));
-                            System.out.println("Adding Next 3 Points");
-                        }
-                        // Done
-                        if (pathPositions.size() == 5) {
-                            addBasicAO(pathPositions);
-                            AO ao = new AO("New AO", 0, 0, null, "New AO", "", "");
-                            addObjectToAddedList("AO", ao);
-                            pathPositions = new ArrayList<Position>();
-                            placingType = 0;
-                            System.out.println("Done with choosing ao");
-                        }
+                    	// First corner
+						if (pathPositions.size() == 0) {
+							System.out.println(pathPositions.size());
+							// Reset array
+							pathPositions = new ArrayList<Position>();
+							pathPositions.add(Position.fromDegrees(latitude,
+									longitude, 1e4));
+							System.out.println(pathPositions.size());
+							System.out.println("Adding first Point");
+						}
+						// Others
+						else {
+							pathPositions.add(Position.fromDegrees(latitude,
+									longitude, 1e4));
+							System.out.println("point add");
+							System.out.println(pathPositions.size());
+						}
                     } 
                     // Create and place Geo zone class
                     else if (placingType == 3) {
@@ -1652,6 +1971,7 @@ public class Menus implements ActionListener, ItemListener {
 
 	//Main method of the application that will be invoked when the project is run
     public static void main(String[] args) {
+    	splash = new SplashScreen();
     // Schedule a job for the event-dispatching thread:
     // Creating and showing this application's GUI.
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
