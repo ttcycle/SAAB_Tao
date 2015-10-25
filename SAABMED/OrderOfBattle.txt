@@ -1,5 +1,5 @@
 //Note: the asterisk (*) indicates having a sub menu
---Select Order Battle--
+---Select Order Battle---
 Ground OB
 Civilian OB
 Maritime OB

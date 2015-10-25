@@ -2,12 +2,12 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
-	<classpathentry kind="lib" path="Y:/Downloads/worldwind-2.0.0/gdal.jar"/>
-	<classpathentry kind="lib" path="Y:/Downloads/worldwind-2.0.0/gluegen-rt.jar"/>
-	<classpathentry kind="lib" path="Y:/Downloads/worldwind-2.0.0/jogl-all.jar"/>
-	<classpathentry kind="lib" path="Y:/Downloads/worldwind-2.0.0/plugin.jar"/>
-	<classpathentry kind="lib" path="Y:/Downloads/worldwind-2.0.0/vpf-symbols.jar"/>
-	<classpathentry kind="lib" path="Y:/Downloads/worldwind-2.0.0/worldwind.jar"/>
-	<classpathentry kind="lib" path="Y:/Downloads/worldwind-2.0.0/worldwindx.jar"/>
+	<classpathentry kind="lib" path="Z:/worldwind-2.0.0/gdal.jar"/>
+	<classpathentry kind="lib" path="Z:/worldwind-2.0.0/gluegen-rt.jar"/>
+	<classpathentry kind="lib" path="Z:/worldwind-2.0.0/jogl-all.jar"/>
+	<classpathentry kind="lib" path="Z:/worldwind-2.0.0/plugin.jar"/>
+	<classpathentry kind="lib" path="Z:/worldwind-2.0.0/vpf-symbols.jar"/>
+	<classpathentry kind="lib" path="Z:/worldwind-2.0.0/worldwind.jar"/>
+	<classpathentry kind="lib" path="Z:/worldwind-2.0.0/worldwindx.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

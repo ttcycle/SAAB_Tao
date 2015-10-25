@@ -11,6 +11,7 @@
 import gov.nasa.worldwind.BasicModel;
 import gov.nasa.worldwind.awt.WorldWindowGLJPanel;
 import gov.nasa.worldwind.geom.Angle;
+import gov.nasa.worldwind.geom.LatLon;
 import gov.nasa.worldwind.geom.Line;
 import gov.nasa.worldwind.geom.Position;
 import gov.nasa.worldwind.geom.Vec4;
@@ -31,10 +32,12 @@ import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.StringWriter;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -115,6 +118,10 @@ import gov.nasa.worldwindx.examples.LineBuilder;
 import gov.nasa.worldwind.WorldWind;
 import gov.nasa.worldwind.layers.Earth.MGRSGraticuleLayer;
 import gov.nasa.worldwind.render.Path;
+import gov.nasa.worldwind.render.airspaces.Airspace;
+import gov.nasa.worldwind.render.airspaces.AirspaceAttributes;
+import gov.nasa.worldwind.render.airspaces.BasicAirspaceAttributes;
+import gov.nasa.worldwind.render.airspaces.CappedCylinder;
 
 //Necessary awt imports
 import java.awt.*;
@@ -159,6 +166,8 @@ public class Menus implements ActionListener, ItemListener {
 
     private static int AOcount = 0;
     private static int AOstatus = 0;
+    
+    private static int routecount = 0;
     
     //Timer used to update path menu, smaller number increases responsiveness and increases cpu requirements
     private final static int ONE_SECOND = 1000;
@@ -275,7 +284,7 @@ public class Menus implements ActionListener, ItemListener {
         //Path path = new Path(positions);
      
         Polyline path = new Polyline(positions, 300);
-
+        
         /** OLD METHOD - Didn't allow for measuring
         //Create and set an attribute bundle.
         //Colour and width can be changed her
@@ -304,6 +313,7 @@ public class Menus implements ActionListener, ItemListener {
         path.setFollowTerrain(true);
         
         measure.setMeasureShape(path);
+        
 
         
         //layer.addRenderable(path);
@@ -537,6 +547,7 @@ public class Menus implements ActionListener, ItemListener {
             System.out.println("Path = " + selectedMenuPath);
             placingType = 1;
             selectedMenuPath = getSymbolLink();
+            createAnnotation("Ground OB Selected - Click to Place");
             System.out.println("New menu path = " + selectedMenuPath);
         }
         // Civilian OB
@@ -544,13 +555,15 @@ public class Menus implements ActionListener, ItemListener {
             System.out.println("Civilian OB SELECTED");
             System.out.println("Path = " + selectedMenuPath);
             placingType = 1;
+            createAnnotation("Civilian OB Selected - Click to Place");
             selectedMenuPath = getSymbolLink();
         }
-        // Maratime OB
+        // Maritime OB
         if (e.getActionCommand().toString().endsWith("Maritime OB")) {
             System.out.println("Maritime OB SELECTED");
             System.out.println("Path = " + selectedMenuPath);
             placingType = 1;
+            createAnnotation("Maritime OB Selected - Click to Place");
             selectedMenuPath = getSymbolLink();
         }
         // Casualty
@@ -558,8 +571,29 @@ public class Menus implements ActionListener, ItemListener {
             System.out.println("Casualty SELECTED");
             System.out.println("Path = " + selectedMenuPath);
             placingType = 5;
+            createAnnotation("Casualty Selected - Click to Place");
             selectedMenuPath = getSymbolLink();
         }
+        
+        // Cube Airspace
+        if (e.getActionCommand().toString().endsWith("Cube")) {
+        	System.out.println("CUBE AIRSPACE SELECTED");
+        	placingType = PlacementType.AIRSPACE_BOX;
+        	createAnnotation("Cube Airspace Selected - Click to Place");
+        }
+        
+        // Cylinder Airspace
+        if (e.getActionCommand().toString().endsWith("Cylinder")) {
+        	System.out.println("CYLINDER AIRSPACE SELECTED");
+        	placingType = PlacementType.AIRSPACE_CYLINDER;
+        	createAnnotation("Cylinder Airspace Selected - Click to Place");
+        }
+        
+        // Exit
+        if (e.getActionCommand().toString().endsWith("Exit")) {
+        	System.exit(0);
+        }
+        
     }
 
     /** Method for placing annotations
@@ -667,17 +701,38 @@ public class Menus implements ActionListener, ItemListener {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				ArrayList<CreatedObject> copyList = new ArrayList<CreatedObject>(Arrays.asList(addedObjectArray));
+				
+				//undraw item
+				String sw = addedObjectArray[addedObjectsList.getSelectedIndex()].getObjectType();
+
+				
+				//switch statement for each type of createdObject - deletes layer based on type of object selected
+				switch (sw) {
+					case "Route": //delete route
+						wwd.getModel().getLayers().remove(addedObjectArray[addedObjectsList.getSelectedIndex()].getRoute());
+						break;
+					case "AO": //delete AO
+						break;
+					case "POI":
+						break;
+					case "GenericSymbology":
+						break;
+					case "MedicalSymbology":
+						break;
+				}
+				
 				copyList.remove(addedObjectsList.getSelectedValue());
 				copyList.toArray(addedObjectArray);
 				
 				System.out.println("Removed Object from Object List");
+									
 				
 				addedObjectsList.setSelectedIndex(-1);
-				
 				addedObjectsList.setListData(addedObjectArray);
 				
 				addedObjectsList.revalidate();
 				addedObjectsList.repaint();
+				wwd.updateUI();
 			}
 			
 		});
@@ -1108,11 +1163,11 @@ public class Menus implements ActionListener, ItemListener {
         aoIDTextField.setPreferredSize(new Dimension(150, 25));
         aoIDTextField.setText(medicalSymbbology.getSymbol().getsID());
 
-        JLabel opNameLabel = new JLabel("Code Name");
-        opNameLabel.setPreferredSize(new Dimension(100, 25));
-        final JTextField opNameTextField = new JTextField();
-        opNameTextField.setPreferredSize(new Dimension(150, 25));
-        opNameTextField.setText(medicalSymbbology.getSymbol().getCodeName());
+        JLabel codeNameLabel = new JLabel("Code Name");
+        codeNameLabel.setPreferredSize(new Dimension(100, 25));
+        final JTextField codeNameTextField = new JTextField();
+        codeNameTextField.setPreferredSize(new Dimension(150, 25));
+        codeNameTextField.setText(medicalSymbbology.getSymbol().getCodeName());
 
         JLabel classificationLabel = new JLabel("Type");
         classificationLabel.setPreferredSize(new Dimension(100, 25));
@@ -1124,13 +1179,19 @@ public class Menus implements ActionListener, ItemListener {
         urgencyLabel.setPreferredSize(new Dimension(100, 25));
         final JTextField urgencyTextField = new JTextField();
         urgencyTextField.setPreferredSize(new Dimension(150, 25));
-        urgencyTextField.setText(medicalSymbbology.getSymbol().getUrgency());
+        urgencyTextField.setText(medicalSymbbology.getUrgency());
 
+        JLabel opnameLabel = new JLabel("Operation Name");
+        opnameLabel.setPreferredSize(new Dimension(100,25));
+        final JTextField opnameTextField = new JTextField();
+        opnameTextField.setPreferredSize(new Dimension(150, 25));
+        opnameTextField.setText(medicalSymbbology.getSymbol().getOPName());
+        
         JLabel commentsLabel = new JLabel("Comments");
         commentsLabel.setPreferredSize(new Dimension(100, 25));
         final JTextArea commentsTextArea = new JTextArea();
         commentsTextArea.setPreferredSize(new Dimension(280, 150));
-        commentsTextArea.setText(medicalSymbbology.getSymbol().getComments());
+        commentsTextArea.setText(medicalSymbbology.getComments());
 
         JLabel aoPoint1Label = new JLabel("Latitude");
         aoPoint1Label.setPreferredSize(new Dimension(75, 25));
@@ -1153,9 +1214,12 @@ public class Menus implements ActionListener, ItemListener {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				
-				OutputStream fs = null;
+				
 				FileWriter fw;
 				String xmlContent = "";
+				FileOutputStream fop;
+				StringWriter writer = new StringWriter();
+				File file = new File("export.xml");
 				try {
 					//for building xml document
 					DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
@@ -1175,8 +1239,13 @@ public class Menus implements ActionListener, ItemListener {
 					role.setAttributeNode(attr);
 					rootElement.appendChild(role);
 					
+					//operation
+					Element operation = doc.createElement("operation");
+					operation.appendChild(doc.createTextNode(medicalSymbbology.getSymbol().getOPName()));
+        			role.appendChild(operation);
+					
+					//name
 					Element name = doc.createElement("name");
-					//TODO: Fix this to match Dennis' requests for structure and field(s)
 					name.appendChild(doc.createTextNode(medicalSymbbology.getSymbol().getCodeName()));
 					role.appendChild(name);
 					
@@ -1185,13 +1254,11 @@ public class Menus implements ActionListener, ItemListener {
 					Transformer transformer = transFactory.newTransformer();
 					transformer.setOutputProperty(OutputKeys.INDENT, "yes");
 					DOMSource source = new DOMSource(doc);
-					//StreamResult result = new StreamResult(new File("file.xml"));
-					StreamResult result = new StreamResult();
+					StreamResult result = new StreamResult(writer);
 					
-					System.out.println(fs.toString());
 					transformer.transform(source, result);
-					//xmlContent = result.getOutputStream().toString();
 					
+					System.out.println(writer.toString());
 
 				} catch (Exception e){
 					e.printStackTrace();
@@ -1207,17 +1274,19 @@ public class Menus implements ActionListener, ItemListener {
 				JFileChooser saveChooser = new JFileChooser();
 				saveChooser.setDialogTitle("Specify Save Location");
 				saveChooser.setFileFilter(filter);
-				//saveChooser.setSelectedFile(xmlFile);
 				
 				//user selection as integer
 				int userSelection = saveChooser.showSaveDialog(masterFrame);
 				
 				if (userSelection == JFileChooser.APPROVE_OPTION) {
+					xmlContent = writer.toString();
 					File fileToSave = saveChooser.getSelectedFile();
 					
 					try {
 						fw = new FileWriter(fileToSave.getAbsolutePath());
 						fw.write(xmlContent.toString());
+						fw.flush();
+						fw.close();
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -1231,7 +1300,6 @@ public class Menus implements ActionListener, ItemListener {
         });
         
         //apply button + action listener
-        //TODO: get this to update details rather than copy instance of symbol
         JButton applyButton = new JButton();
         applyButton.setText("Apply");
         applyButton.setPreferredSize(new Dimension(300, 25));
@@ -1239,7 +1307,21 @@ public class Menus implements ActionListener, ItemListener {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Apply Pressed");
-                GenericSymbology tempGS = addedObjectArray[addedObjectsList.getSelectedIndex()].getMedicalSymbology().getSymbol();
+                Angle lat = null;
+                Angle lon = null;
+                Position pos = medicalSymbbology.getSymbol().getPosition();
+                
+                //updates all the fields for the currently selected object
+                medicalSymbbology.getSymbol().setPosition(new Position(lat.fromDegrees(Double.parseDouble(latTextField.getText().replace("°", ""))), lon.fromDegrees(Double.parseDouble(lonTextField.getText().replace("°", ""))), pos.getElevation()));
+                medicalSymbbology.getSymbol().setsID(aoIDTextField.getText());
+                medicalSymbbology.getSymbol().setCodeName(codeNameTextField.getText());
+                medicalSymbbology.getSymbol().setType(classificationTextField.getText());
+                medicalSymbbology.getSymbol().setOPName(opnameTextField.getText());
+                medicalSymbbology.setUrgency(urgencyTextField.getText());
+                medicalSymbbology.setComments(commentsTextArea.getText());
+                
+                //Old Broken Method - made copy of object instead of update details
+                /*GenericSymbology tempGS = addedObjectArray[addedObjectsList.getSelectedIndex()].getMedicalSymbology().getSymbol();
                 tempGS.setsID(aoIDTextField.getText());
                 tempGS.setCodeName(opNameTextField.getText());
                 tempGS.setType(classificationTextField.getText());
@@ -1250,18 +1332,22 @@ public class Menus implements ActionListener, ItemListener {
 		
                 //New coords
                 CreatedObject newCO = new CreatedObject(addedObjectArray[addedObjectsList.getSelectedIndex()].getObjectType(), tempMS);
-                replaceObjectInAddedList(addedObjectsList.getSelectedIndex(), newCO);
+                replaceObjectInAddedList(addedObjectsList.getSelectedIndex(), newCO);*/
+                
+                
             }
         });
 
         panel.add(aoNameLabel);
         panel.add(aoIDTextField);
-        panel.add(opNameLabel);
-        panel.add(opNameTextField);
+        panel.add(codeNameLabel);
+        panel.add(codeNameTextField);
         panel.add(classificationLabel);
         panel.add(classificationTextField);
         panel.add(urgencyLabel);
         panel.add(urgencyTextField);
+        panel.add(opnameLabel);
+        panel.add(opnameTextField);
         panel.add(commentsLabel);
         panel.add(commentsTextArea);
         panel.add(aoPoint1Label);
@@ -1511,23 +1597,30 @@ public class Menus implements ActionListener, ItemListener {
             public void actionPerformed(ActionEvent e) {
             	
                 System.out.println("Apply Pressed");
+                
+                //OLD Method - created a copy of selected route with modified positions instead of changing current positions
                 Route tempRoute = addedObjectArray[addedObjectsList.getSelectedIndex()].getRoute();
-                tempRoute.setPathName(pathNameTextField.getText());
+                /*tempRoute.setPathName(pathNameTextField.getText());
                 //TODO: fix this from making a "NEW" route
-                /**
-                 * Idea: delete old route on clicking apply
-                 */
                 p[routePointsList.getSelectedIndex()] = Position.fromDegrees(Double.parseDouble(latTextField.getText().replace("°", "")), Double.parseDouble(lonTextField.getText().replace("°", "")), p[routePointsList.getSelectedIndex()].getAltitude());
                 routePointsList.setListData(p);
                 ArrayList<Position> tp = new ArrayList<Position>();
                 for (Position position : p) {
                     tp.add(position);
                 }
-                tempRoute.setPathCoords(tp);
+                tempRoute.setPathCoords(tp);*/
 
-                
                 //TODO: Instead of copying route - call setPathCoords() with new Coords. :)
+                ArrayList<Position> newCoords = new ArrayList<Position>();
                 
+                p[routePointsList.getSelectedIndex()] = Position.fromDegrees(Double.parseDouble(latTextField.getText().replace("°", "")), Double.parseDouble(lonTextField.getText().replace("°", "")), p[routePointsList.getSelectedIndex()].getAltitude());
+                routePointsList.setListData(p);
+                for (Position pos : p) {
+                	newCoords.add(pos);
+                }
+                
+                route.setPathCoords(newCoords);
+                                
                 
                 //New path
                 CreatedObject newCO = new CreatedObject(addedObjectArray[addedObjectsList.getSelectedIndex()].getObjectType(), route);
@@ -1536,11 +1629,11 @@ public class Menus implements ActionListener, ItemListener {
                 //New route
                 //Adds a modified route to the map
                 System.out.println("Added new route");
-                
-                Route newRoute = new Route("New Path", tp, 0, 0);
+                wwd.getModel().getLayers().remove(tempRoute);
+                /*Route newRoute = new Route("New Path", tp, 0, 0);
                 addBasicPath(newRoute.getPathCoords());
                 pathPositions = new ArrayList<Position>();
-                addObjectToAddedList("Route", route);
+                addObjectToAddedList("Route", route);*/
             }
         });
 
@@ -1802,8 +1895,7 @@ public class Menus implements ActionListener, ItemListener {
 								System.out.println("Done with choosing ao");
 								annotationlayer.removeAllAnnotations();
 							}
-						}
-                        else
+						} else
                         	pathPositions = new ArrayList<Position>();//empty the array if points are not >2
                    
                     }
@@ -1936,10 +2028,36 @@ public class Menus implements ActionListener, ItemListener {
                         addTacticalSymbols(latitude, longitude, altitude, "SFXPxxxxxx--xxG", "POI", "POI Layer");
                         POI poi = new POI("New POI", "New POI", "", "", 0, "", "", new ArrayList<Casualty>(), "", "");
                         addObjectToAddedList("POI", poi);
-                    } else {
+                        
+                    }
+                    // Create and place Airspace BOX
+                    else if (placingType == PlacementType.AIRSPACE_BOX) {
+                    	
+                    	ArrayList<Position> pos = new ArrayList<Position>();
+                    	while (pos.size() <= 4) {
+                    		System.out.println("Pos array size: " + pos.size());
+                    		pos.add(Position.fromDegrees(latitude, longitude, 0));
+                    	}
+                    	placingType = 0;
+                    	addAirspace(PlacementType.AIRSPACE_BOX, pos);
+                    	
+                    	annotationlayer.removeAllAnnotations();
+                	}
+                    // Create and place Airspace CYLINDER
+                    else if (placingType == PlacementType.AIRSPACE_CYLINDER) { 
+                    	ArrayList<Position> pos = new ArrayList<Position>();
+                    	pos.add(clickedPosition);
+                    	placingType = 0;
+                    	addAirspace(PlacementType.AIRSPACE_CYLINDER, pos);
+                    	
+                    	annotationlayer.removeAllAnnotations();
+                	} else {
                         System.out.println("Nothing to place");
                     }
+                    
                 }
+
+
             });
         } catch (Exception e) {
             e.printStackTrace();
@@ -1947,8 +2065,45 @@ public class Menus implements ActionListener, ItemListener {
 
     }
 
+    /** Method for adding airspaces
+     * 
+     * @param type
+     * @param pos
+     */
+    
+    public static void addAirspace(int type, ArrayList<Position> pos) {
+    	RenderableLayer layer = new RenderableLayer();
+    	layer.setName("Airspace Layer");
+    	
+    	
+    	AirspaceAttributes attr = new BasicAirspaceAttributes();
+		attr.setOutlineMaterial(new Material(WWUtil.makeRandomColor(null)));
+		attr.setOutlineWidth(2d);
+		attr.setOpacity(0.5);
+		
+    	switch (type) {
+    	case PlacementType.AIRSPACE_BOX:
+    		break;
+    	case PlacementType.AIRSPACE_CYLINDER:
+    		Position cylinderPos = pos.get(0);
+    		LatLon cylinderLatLon = new LatLon(cylinderPos.latitude, cylinderPos.longitude);
+    		//take in first item in list as only single position is required
+    		//cylinder(pos,height,radius)
+    		CappedCylinder airCylinder = new CappedCylinder(cylinderLatLon, 3000);
+    		
+    		//altitudes(lower, upper)
+    		airCylinder.setAltitudes(500, 1500);
+    		airCylinder.setAttributes(attr);
+    		layer.addRenderable(airCylinder);
+    		wwd.getModel().getLayers().add(layer);
+    		wwd.updateUI();
+    		
+    		break;
+    	}
+		
+	}
+    
     //Method for measuring length of routes in specified units
-    //TODO : Implement settings panel for changing units
     public static double measureRoute(ArrayList<Position> positions) {
 		MeasureTool measure = new MeasureTool(wwd);
 		
@@ -1971,9 +2126,13 @@ public class Menus implements ActionListener, ItemListener {
 
 	//Main method of the application that will be invoked when the project is run
     public static void main(String[] args) {
+    	
+    	//Creates splash screen - hides when map is finished loading
     	splash = new SplashScreen();
-    // Schedule a job for the event-dispatching thread:
-    // Creating and showing this application's GUI.
+    	
+    	
+    	// Schedule a job for the event-dispatching thread:
+    	// Creating and showing this application's GUI.
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 System.out.println("Loading Symbology Link File...");

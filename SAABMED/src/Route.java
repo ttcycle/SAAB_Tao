@@ -13,6 +13,7 @@ public class Route {
 	private double lat;
 	private double lon;
 	private double length;
+	private int listPos;
 	
 	public Route()
 	{
