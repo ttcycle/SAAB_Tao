@@ -2656,7 +2656,7 @@ private static void createGenShapeDetails(final GenShape as) {
                         int pos =  wwd.getModel().getLayers().size();
                         addTacticalSymbols(latitude, longitude, elevation, selectedMenuPath, "MIL-STD-2525 Tactical Symbol", "My Symbol Layer");
                         System.out.println("Now placing new symbol = " + selectedMenuPath);
-                        GenericSymbology genericSymbology = new GenericSymbology("New Generic Symbology", "", selectedMenuPath, .5, 1, true, "", "", Position.fromDegrees(latitude, longitude, altitude), new GeoZone("", "", Position.fromDegrees(0, 0), 0),addedObjectArray.length);
+                        GenericSymbology genericSymbology = new GenericSymbology("New Generic Symbology", "", selectedMenuPath, .5, 1, true, "", "", Position.fromDegrees(latitude, longitude, altitude), new GeoZone("", "", Position.fromDegrees(0, 0), 0),pos);
                         addObjectToAddedList("GenericSymbology", genericSymbology);
                         annotationlayer.removeAllAnnotations();
                         placingType = 0;
