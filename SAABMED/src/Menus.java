@@ -1,4 +1,4 @@
-/**
+ï»¿/**
  * Version 1.0: Initial Code given 
  * Current: Version 1.1: Optimization and Refactor of code
  *                       Added New comments and cleaned loops
@@ -45,7 +45,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Spliterator;
+import java.util.concurrent.TimeUnit;
 
 //Necessary swing imports
 import javax.swing.BorderFactory;
@@ -112,6 +112,7 @@ import gov.nasa.worldwind.symbology.*;
 import gov.nasa.worldwind.symbology.milstd2525.*;
 import gov.nasa.worldwind.terrain.HighResolutionTerrain;
 import gov.nasa.worldwind.util.BasicDragger;
+import gov.nasa.worldwind.util.BasicScheduledTaskService;
 import gov.nasa.worldwind.util.UnitsFormat;
 import gov.nasa.worldwind.util.WWUtil;
 import gov.nasa.worldwindx.examples.LineBuilder;
@@ -122,6 +123,7 @@ import gov.nasa.worldwind.render.airspaces.Airspace;
 import gov.nasa.worldwind.render.airspaces.AirspaceAttributes;
 import gov.nasa.worldwind.render.airspaces.BasicAirspaceAttributes;
 import gov.nasa.worldwind.render.airspaces.CappedCylinder;
+import gov.nasa.worldwind.render.airspaces.Polygon;
 
 //Necessary awt imports
 import java.awt.*;
@@ -155,6 +157,8 @@ public class Menus implements ActionListener, ItemListener {
     protected HighResolutionTerrain terrain;
     private static RenderableLayer routelayer;
     private static AnnotationLayer annotationlayer;
+    private static ArrayList<Line> lines = new ArrayList<Line>();
+    private static AnnotationLayer globalAnnotationLayer;
 
     static JFrame frame;
     private JButton newButton;
@@ -173,7 +177,7 @@ public class Menus implements ActionListener, ItemListener {
     private final static int ONE_SECOND = 1000;
 
     //Create a tactical symbol to be added to the map using the passed in symbol code
-    private static void addTacticalSymbols(double latitude, double longitude,
+    private static int addTacticalSymbols(double latitude, double longitude,
             double altitude, String symbolCode, String symbolName,
             String layerName) {
                 //Setup symbol layer
@@ -195,6 +199,7 @@ public class Menus implements ActionListener, ItemListener {
         // Add the symbol layer to the World Wind model.
         wwd.getModel().getLayers().add(layer);
         wwd.updateUI();
+        return wwd.getModel().getLayers().indexOf(layer, 0);
     }
 
 
@@ -203,8 +208,9 @@ public class Menus implements ActionListener, ItemListener {
      * @param lat
      * @param lon
      * @param radius
+     * @return 
      */
-    private static void placeGeoZone(double lat, double lon, double radius) {
+    private static int placeGeoZone(double lat, double lon, double radius) {
         //Place an ellipsoid at the input location with the input radius
         ShapeAttributes attrs = new BasicShapeAttributes();
         //Can eventually input the colour into this method header to change the colour depending on hostility
@@ -231,6 +237,7 @@ public class Menus implements ActionListener, ItemListener {
         //Add the layer to the World wind model
         wwd.getModel().getLayers().add(layer);
         wwd.updateUI();
+        return wwd.getModel().getLayers().indexOf(layer, 0);
     }
 
 
@@ -276,14 +283,15 @@ public class Menus implements ActionListener, ItemListener {
     /** Method for creating a route/path
      * 
      * @param positions
+     * @return 
      */
-      private static void addBasicPath(List<Position> positions) {
+      private static int addBasicPath(List<Position> positions) {
         //BUG: Only one path can be on a layer with the same name so this breaks the layer toggle feature only toggling one of the path
         RenderableLayer layer = new RenderableLayer();
         layer.setName("Route Layer");
         //Path path = new Path(positions);
      
-        Polyline path = new Polyline(positions, 300);
+        
         
         /** OLD METHOD - Didn't allow for measuring
         //Create and set an attribute bundle.
@@ -298,21 +306,12 @@ public class Menus implements ActionListener, ItemListener {
         //path.setPathType(AVKey.RHUMB_LINE);
         */
         
-		MeasureTool measure = new MeasureTool(wwd);
-
-		
-		measure.setController(new MeasureToolController());
-		measure.getUnitsFormat().setLengthUnits(UnitsFormat.KILOMETERS);
-		
+        
 		//this flag will be false for air travel
 		//measure.setFollowTerrain(true);
 		
 		//path.setOffset(arg0);
-        path.setColor(Color.RED);
-        path.setLineWidth(100);
-        path.setFollowTerrain(true);
         
-        measure.setMeasureShape(path);
         
 
         
@@ -323,6 +322,7 @@ public class Menus implements ActionListener, ItemListener {
         //Add path to world wind model
         wwd.getModel().getLayers().add(layer);
         wwd.updateUI();
+        return wwd.getModel().getLayers().indexOf(layer, 0);
     }
 
 
@@ -357,7 +357,7 @@ public class Menus implements ActionListener, ItemListener {
         String[] symbolModifier = openMenusTxt("SymbolModifier.txt");
         String[] country = openMenusTxt("Country.txt");
         String[] orderOfBattle = openMenusTxt("OrderOfBattle.txt");
-        String[] airspaceTypes = openMenusTxt("AirspaceTypes.txt");
+        //String[] airspaceTypes = openMenusTxt("AirspaceTypes.txt");
         
         
 
@@ -704,21 +704,35 @@ public class Menus implements ActionListener, ItemListener {
 				
 				//undraw item
 				String sw = addedObjectArray[addedObjectsList.getSelectedIndex()].getObjectType();
-
-				
-				//switch statement for each type of createdObject - deletes layer based on type of object selected
-				switch (sw) {
-					case "Route": //delete route
-						wwd.getModel().getLayers().remove(addedObjectArray[addedObjectsList.getSelectedIndex()].getRoute());
-						break;
-					case "AO": //delete AO
-						break;
-					case "POI":
-						break;
-					case "GenericSymbology":
-						break;
-					case "MedicalSymbology":
-						break;
+				if(sw.contentEquals("AO")){
+					AO tempAo = addedObjectArray[addedObjectsList.getSelectedIndex()].getAo();
+					wwd.getModel().getLayers().remove(tempAo.getPos());
+				}
+				else if(sw.contentEquals("GeoZone")){
+					GeoZone tempGZ = addedObjectArray[addedObjectsList.getSelectedIndex()].getGeoZone();
+					System.out.println("removing geoZone" + tempGZ.getPos()+ "   " + wwd.getModel().getLayers().size());
+					wwd.getModel().getLayers().remove(tempGZ.getPos());
+				}
+				else if(sw.contentEquals("Route")){
+					Route tempRoute = addedObjectArray[addedObjectsList.getSelectedIndex()].getRoute();
+					System.out.println("removing route" + tempRoute.getPos()+ "   " + wwd.getModel().getLayers().size());
+					wwd.getModel().getLayers().remove(tempRoute.getPos());
+					
+				}
+				else if(sw.contains("MedicalSymbology")){
+					MecialSymbology tempMS = addedObjectArray[addedObjectsList.getSelectedIndex()].getMedicalSymbology();
+					System.out.println("removing MedicalSymbology" + tempMS.getPos()+ "   " + wwd.getModel().getLayers().size());
+					wwd.getModel().getLayers().remove(tempMS.getPos());
+				}
+				else if(sw.contains("GenericSymbology")){
+					GenericSymbology tempGS = addedObjectArray[addedObjectsList.getSelectedIndex()].getGenericSymbology();
+					System.out.println("removing GenericSymbology" + tempGS.getPos()+ "   " + wwd.getModel().getLayers().size());
+					wwd.getModel().getLayers().remove(tempGS.getPos());
+				}
+				else if(sw.contains("POI")){
+					POI tempPOI = addedObjectArray[addedObjectsList.getSelectedIndex()].getPoi();
+					System.out.println("removing POI" + tempPOI.getPos()+ "   " + wwd.getModel().getLayers().size());
+					wwd.getModel().getLayers().remove(tempPOI.getPos());
 				}
 				
 				copyList.remove(addedObjectsList.getSelectedValue());
@@ -733,6 +747,7 @@ public class Menus implements ActionListener, ItemListener {
 				addedObjectsList.revalidate();
 				addedObjectsList.repaint();
 				wwd.updateUI();
+				
 			}
 			
 		});
@@ -883,7 +898,311 @@ public class Menus implements ActionListener, ItemListener {
         return panel;
     }
 
+
+
+
+
+
     //The next few methods setup java swing components for a selected object to be placed on the right panel
+
+
+private static void createAirspaceDetails(final AirSpace as) {
+    	
+    	final JPanel panel = new JPanel();
+    	panel.setPreferredSize(new Dimension(300,800));
+    	JLabel asNameLabel = new JLabel("Airspace ID");
+    	asNameLabel.setPreferredSize(new Dimension(150,25));
+    	final JTextField asIDTextField = new JTextField();
+    	asIDTextField.setPreferredSize(new Dimension(140,25));
+    	asIDTextField.setText(as.getName());
+    	
+    	//add generic labels/fields
+    	panel.add(asNameLabel);
+    	panel.add(asIDTextField);
+    	
+    	switch (as.getType()) {
+    	case PlacementType.AIRSPACE_BOX:
+    		
+    		final LatLon[] p = new LatLon[as.getPos().size()];
+    		int i = 0;
+    		for (LatLon ll : as.getPos()) {
+    			p[i] = as.getPos().get(i);
+    			i++;
+    		}
+    		JLabel latLabel = new JLabel("Latitude");
+    		latLabel.setPreferredSize(new Dimension(150, 25));
+    		final JTextField boxlatTextField = new JTextField();
+    		boxlatTextField.setPreferredSize(new Dimension(140, 25));
+    		JLabel lonLabel = new JLabel("Longitude");
+    		lonLabel.setPreferredSize(new Dimension(150, 25));
+    		final JTextField boxlonTextField = new JTextField();
+    		boxlonTextField.setPreferredSize(new Dimension(140, 25));
+    		
+
+    		
+    		JLabel asLatLonListLabel = new JLabel("Points(Lat,Lon)");
+    		asLatLonListLabel.setPreferredSize(new Dimension(100, 25));
+    		final JList<LatLon> asLatLonPoints = new JList<LatLon>(p);
+    		asLatLonPoints.setPreferredSize(new Dimension(280, 150));
+    		asLatLonPoints.addListSelectionListener(new ListSelectionListener() {
+
+				@Override
+				public void valueChanged(ListSelectionEvent arg0) {
+					try {
+						boxlatTextField.setText(p[asLatLonPoints.getSelectedIndex()].getLatitude().toString());
+						boxlonTextField.setText(p[asLatLonPoints.getSelectedIndex()].getLongitude().toString());
+					} catch (IndexOutOfBoundsException e) {
+						e.printStackTrace();
+					}
+					
+				}
+    			
+    		});
+    		
+    		//Upper Bounds
+    		JLabel boxasUpperLabel = new JLabel("Upper Altitude");
+    		boxasUpperLabel.setPreferredSize(new Dimension(150,25));
+    		final JTextField boxupperTextField = new JTextField();
+    		boxupperTextField.setPreferredSize(new Dimension(140,25));
+    		boxupperTextField.setText(Double.toString(as.getUpper()));
+    		    		
+    		//Lower Bounds
+    		JLabel boxasLowerLabel = new JLabel("Lower Altitude");
+    		boxasLowerLabel.setPreferredSize(new Dimension(150,25));
+    		final JTextField boxlowerTextField = new JTextField();
+    		boxlowerTextField.setPreferredSize(new Dimension(140,25));
+    		boxlowerTextField.setText(Double.toString(as.getLower()));
+    		
+    		KeyAdapter AODetailsKeyAdapter = new KeyAdapter(){
+    			
+    		};
+    		
+    		//Longitude editor
+    		boxlonTextField.addKeyListener(new KeyAdapter() {
+    			public void keyPressed(KeyEvent e) {
+    				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+    					
+    					Angle longitude = null;
+    					Angle latitude = null;
+    					
+    					latitude = latitude.fromDegrees(Double.parseDouble(boxlatTextField.getText().replace("Â°", "")));
+    					longitude = longitude.fromDegrees(Double.parseDouble(boxlonTextField.getText().replace("Â°", "")));
+    					
+    					LatLon tempLatLon = new LatLon(latitude,longitude);
+    					
+    					int i = 0;
+    					for (LatLon ll : p) {
+    						if (p[i] == asLatLonPoints.getSelectedValue()) {
+    							p[i] = tempLatLon;
+    						}
+    						
+    						i++;
+    					}
+    					
+    					ArrayList<Position> newPos = new ArrayList<Position>();
+    					for (LatLon np : p) {
+    						newPos.add(new Position(np.getLatitude(), np.getLongitude(),0));
+    					}
+    					
+    					AirSpace tempAS = new AirSpace(PlacementType.AIRSPACE_BOX, newPos, Double.parseDouble(boxupperTextField.getText()), Double.parseDouble(boxlowerTextField.getText()));
+    					CreatedObject newCO = new CreatedObject(addedObjectArray[addedObjectsList.getSelectedIndex()].getObjectType(), tempAS);
+    					replaceObjectInAddedList(addedObjectsList.getSelectedIndex(), newCO);
+    					wwd.getModel().getLayers().remove(tempAS.getName());
+    					
+    					addAirspace(PlacementType.AIRSPACE_BOX, tempAS.getPos());    					
+    					
+    					panel.requestFocus();
+    					
+    					//asLatLonPoints.setListData(p);
+    					
+    					asLatLonPoints.validate();
+    					asLatLonPoints.repaint();
+    				}
+    			}
+    		});
+    		
+    		
+    		//apply button
+    		JButton boxapplyButton = new JButton();
+    		boxapplyButton.setText("Apply");
+    		boxapplyButton.setPreferredSize(new Dimension(300, 25));
+    		boxapplyButton.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent arg0) {
+					// TODO Finish ApplyButton Action Listener for Box Airspace editing
+					
+				}
+    			
+    		});
+    		
+    		
+    		
+    		panel.add(asLatLonListLabel);
+    		panel.add(asLatLonPoints);
+    		panel.add(latLabel);
+    		panel.add(boxlatTextField);
+    		panel.add(lonLabel);
+    		panel.add(boxlonTextField);
+    		panel.add(boxasUpperLabel);
+    		panel.add(boxupperTextField);
+    		panel.add(boxasLowerLabel);
+    		panel.add(boxlowerTextField);
+    		panel.add(boxapplyButton);
+    		
+    		
+    		
+    		break;
+    	case PlacementType.AIRSPACE_CYLINDER:
+    		
+    		//Center position
+    		JLabel asLatLabel = new JLabel("Latitude");
+    		asLatLabel.setPreferredSize(new Dimension(150,25));
+    		JLabel asLonLabel = new JLabel("Longitude");
+    		asLonLabel.setPreferredSize(new Dimension(150,25));
+    		final JTextField latTextField = new JTextField();
+    		latTextField.setPreferredSize(new Dimension(140, 25));
+    		latTextField.setText(as.getPos().get(0).getLatitude().toString());
+    		final JTextField lonTextField = new JTextField();
+    		lonTextField.setPreferredSize(new Dimension(140, 25));
+    		lonTextField.setText(as.getPos().get(0).getLongitude().toString());
+    		
+    		//Radius
+    		JLabel asRadiusLabel = new JLabel("Radius");
+    		asRadiusLabel.setPreferredSize(new Dimension(150,25));
+    		final JTextField radiusTextField = new JTextField();
+    		radiusTextField.setPreferredSize(new Dimension(140, 25));
+    		radiusTextField.setText(Double.toString(as.getRadius()));
+    		
+    		//Upper Bounds
+    		JLabel asUpperLabel = new JLabel("Upper Altitude");
+    		asUpperLabel.setPreferredSize(new Dimension(150,25));
+    		final JTextField upperTextField = new JTextField();
+    		upperTextField.setPreferredSize(new Dimension(140,25));
+    		upperTextField.setText(Double.toString(as.getUpper()));
+    		    		
+    		//Lower Bounds
+    		JLabel asLowerLabel = new JLabel("Lower Altitude");
+    		asLowerLabel.setPreferredSize(new Dimension(150,25));
+    		final JTextField lowerTextField = new JTextField();
+    		lowerTextField.setPreferredSize(new Dimension(140,25));
+    		lowerTextField.setText(Double.toString(as.getLower()));
+    		
+    		
+    		//apply button
+    		JButton cylapplyButton = new JButton();
+    		cylapplyButton.setText("Apply");
+    		cylapplyButton.setPreferredSize(new Dimension(300, 25));
+    		cylapplyButton.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent arg0) {
+					// TODO Finish ApplyButton Action Listener for Cylinder Airspace editing
+					
+				}
+    			
+    		});
+    		
+    		//add all labels/textfields
+    		
+    		panel.add(asLatLabel);
+    		panel.add(latTextField);
+    		panel.add(asLonLabel);
+    		panel.add(lonTextField);
+    		panel.add(asRadiusLabel);
+    		panel.add(radiusTextField);
+    		panel.add(asUpperLabel);
+    		panel.add(upperTextField);
+    		panel.add(asLowerLabel);
+    		panel.add(lowerTextField);
+    		panel.add(cylapplyButton);
+    		
+    		break;
+    	}
+    	
+    	masterFrame.remove(rightMasterPanel);
+    	rightMasterPanel = new JPanel();
+    	rightMasterPanel.setPreferredSize(new Dimension(300,800));
+    	rightMasterPanel.add(panel);
+    	masterFrame.add(rightMasterPanel, java.awt.BorderLayout.EAST);
+    	masterFrame.repaint();
+    	masterFrame.validate();
+
+    }
+
+
+	private static void checkThreatAreas() {
+    	
+		//lines.clear();
+    	
+    	/* Generate array of lines for each route in addedObjectArray
+    	 * 
+    	 * for each GeoZone in addedObjectArray
+    	 * 		if (line.distanceTo(GeoZone center) < geoZone.radius)
+    	 * 			therefore intersecting
+    	 * 
+    	 */
+    	
+    	
+    	HighResolutionTerrain terrain = new HighResolutionTerrain(wwd.getModel().getGlobe(), 20d);
+    	System.out.println("Checking for Route-GeoZone Collisions");
+    	for (CreatedObject co : addedObjectArray) {
+    	   	//Routes
+    		if (co.getObjectType() == "Route") {
+    			Route tempRoute = co.getRoute();
+    			//generates list of lines to check
+    			for (int i = 0 ; i < tempRoute.getPathCoords().size() - 1; i++) {
+    				Vec4 refPoint = terrain.getSurfacePoint(tempRoute.getPathCoords().get(i));
+    				Vec4 tarPoint = terrain.getSurfacePoint(tempRoute.getPathCoords().get(i+1));
+    				Line line = new Line(tarPoint, refPoint.subtract3(tarPoint));
+    				lines.add(line);
+    			}
+    			
+    		}
+    		
+    		//GeoZone
+    		if (co.getObjectType() == "GenericSymbology") {
+    			GeoZone tempGZ = co.getGenericSymbology().getGeoZone();
+    			//System.out.println("Geo Zone Radius " + tempGZ.getradius());
+    			for (Line l : lines) {
+    				//System.out.println(l.toString());
+    				if (l.distanceTo(terrain.getSurfacePoint(tempGZ.getArea())) < tempGZ.getradius()) {
+    					Position pos = new Position(wwd.getModel().getGlobe().computePositionFromPoint(l.getOrigin()), 0);
+    					//System.out.println(pos.toString());
+    					createPointAnnotation(pos, "DANGER! Route Passing through Threat Area");
+    					//System.out.println("INTERSECTION");
+    				}
+    			}
+    			
+    			
+    			
+    		}
+    		
+   		
+    		
+    	}
+    }	
+
+	
+    private static void createPointAnnotation(Position point, String annotation) {
+    	
+    	globalAnnotationLayer.removeAllAnnotations();
+    	GlobeAnnotation ga = new GlobeAnnotation(annotation, point);
+    	AnnotationAttributes aa = new AnnotationAttributes();
+    	aa.setBackgroundColor(Color.red);
+    	aa.setTextColor(Color.white);
+    	aa.setFont(Font.decode("Arial-BOLD-14"));
+    	ga.setAttributes(aa);
+    	ga.setPickEnabled(false);
+        globalAnnotationLayer.addAnnotation(ga);
+    	
+    	//wwd.getModel().getLayers().add(globalAnnotationLayer);
+    	//annotationlayer.addAnnotation(ga);
+    	wwd.redraw();
+    	
+    }
+
+
     //TODO: Detail views apply buttons update the data stored about each of the objects however they do not update any features on the map
     private static void createAODetails(final AO ao) {
         JPanel panel = new JPanel();
@@ -1095,8 +1414,9 @@ public class Menus implements ActionListener, ItemListener {
         
         geoZoneAddButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent arg0) {
-                GeoZone tempGeoZone = new GeoZone(geoZoneIDTextField.getText(), geoZoneTypeTextField.getText(), genericSymbology.getPosition(), Double.parseDouble(geoZoneRadiusTextField.getText()));
-                placeGeoZone(tempGeoZone.getArea().getLatitude().degrees, tempGeoZone.getArea().getLongitude().degrees, tempGeoZone.getradius());
+                GeoZone tempGeoZone = new GeoZone(geoZoneIDTextField.getText(), geoZoneTypeTextField.getText(), genericSymbology.getPosition(), Double.parseDouble(geoZoneRadiusTextField.getText()),genericSymbology.getGeoZone().getPos());
+                int pos = placeGeoZone(tempGeoZone.getArea().getLatitude().degrees, tempGeoZone.getArea().getLongitude().degrees, tempGeoZone.getradius());
+                tempGeoZone.setPos(pos);
             }
         });
 
@@ -1106,7 +1426,7 @@ public class Menus implements ActionListener, ItemListener {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Apply Pressed");
-                GeoZone ngs = new GeoZone(geoZoneIDTextField.getText(), geoZoneTypeTextField.getText(), genericSymbology.getPosition(), Double.parseDouble(geoZoneRadiusTextField.getText()));
+                GeoZone ngs = new GeoZone(geoZoneIDTextField.getText(), geoZoneTypeTextField.getText(), genericSymbology.getPosition(), Double.parseDouble(geoZoneRadiusTextField.getText()),genericSymbology.getGeoZone().getPos());
                 GenericSymbology tempGS = addedObjectArray[addedObjectsList.getSelectedIndex()].getGenericSymbology();
                 tempGS.setsID(aoIDTextField.getText());
                 tempGS.setCodeName(opNameTextField.getText());
@@ -1312,7 +1632,7 @@ public class Menus implements ActionListener, ItemListener {
                 Position pos = medicalSymbbology.getSymbol().getPosition();
                 
                 //updates all the fields for the currently selected object
-                medicalSymbbology.getSymbol().setPosition(new Position(lat.fromDegrees(Double.parseDouble(latTextField.getText().replace("°", ""))), lon.fromDegrees(Double.parseDouble(lonTextField.getText().replace("°", ""))), pos.getElevation()));
+                //medicalSymbbology.getSymbol().setPosition(new Position(lat.fromDegrees(Double.parseDouble(latTextField.getText().replace("ï¿½, ""))), lon.fromDegrees(Double.parseDouble(lonTextField.getText().replace("ï¿½, ""))), pos.getElevation()));
                 medicalSymbbology.getSymbol().setsID(aoIDTextField.getText());
                 medicalSymbbology.getSymbol().setCodeName(codeNameTextField.getText());
                 medicalSymbbology.getSymbol().setType(classificationTextField.getText());
@@ -1487,7 +1807,7 @@ public class Menus implements ActionListener, ItemListener {
                 tempPoi.setEnemyTac(enemyTacTextField.getText());
                 tempPoi.setPriority(priorityTextField.getText());
                 tempPoi.setMobility(mobilityTextField.getText());
-                ArrayList<Casualty> ncl = new ArrayList<>();
+                ArrayList<Casualty> ncl = new ArrayList<Casualty>();
                 for (Casualty casualty : tc) {
                     ncl.add(casualty);
                 }
@@ -1602,7 +1922,7 @@ public class Menus implements ActionListener, ItemListener {
                 Route tempRoute = addedObjectArray[addedObjectsList.getSelectedIndex()].getRoute();
                 /*tempRoute.setPathName(pathNameTextField.getText());
                 //TODO: fix this from making a "NEW" route
-                p[routePointsList.getSelectedIndex()] = Position.fromDegrees(Double.parseDouble(latTextField.getText().replace("°", "")), Double.parseDouble(lonTextField.getText().replace("°", "")), p[routePointsList.getSelectedIndex()].getAltitude());
+                p[routePointsList.getSelectedIndex()] = Position.fromDegrees(Double.parseDouble(latTextField.getText().replace("ï¿½, "")), Double.parseDouble(lonTextField.getText().replace("ï¿½, "")), p[routePointsList.getSelectedIndex()].getAltitude());
                 routePointsList.setListData(p);
                 ArrayList<Position> tp = new ArrayList<Position>();
                 for (Position position : p) {
@@ -1613,7 +1933,7 @@ public class Menus implements ActionListener, ItemListener {
                 //TODO: Instead of copying route - call setPathCoords() with new Coords. :)
                 ArrayList<Position> newCoords = new ArrayList<Position>();
                 
-                p[routePointsList.getSelectedIndex()] = Position.fromDegrees(Double.parseDouble(latTextField.getText().replace("°", "")), Double.parseDouble(lonTextField.getText().replace("°", "")), p[routePointsList.getSelectedIndex()].getAltitude());
+               // p[routePointsList.getSelectedIndex()] = Position.fromDegrees(Double.parseDouble(latTextField.getText().replace("ï¿½, "")), Double.parseDouble(lonTextField.getText().replace("ï¿½, "")), p[routePointsList.getSelectedIndex()].getAltitude());
                 routePointsList.setListData(p);
                 for (Position pos : p) {
                 	newCoords.add(pos);
@@ -1684,6 +2004,24 @@ public class Menus implements ActionListener, ItemListener {
 
         // Display the window.
         masterFrame.setSize(Toolkit.getDefaultToolkit().getScreenSize().width, Toolkit.getDefaultToolkit().getScreenSize().height);
+	
+
+
+	BasicScheduledTaskService threatCheck = new BasicScheduledTaskService();
+        
+        //anonymous inner class for checking threat/route collisions every 5 seconds
+        final class CheckThreat implements Runnable {
+
+			@Override
+			public void run() {
+				checkThreatAreas();
+				
+			}
+        	
+        }
+        
+        threatCheck.addRepeatingTask(new CheckThreat(), 5000, 5000, TimeUnit.MILLISECONDS);
+
 
         //The options menu is used to toggle on and off ui components
         JMenu optionsMenu = new JMenu("Options");
@@ -1841,9 +2179,23 @@ public class Menus implements ActionListener, ItemListener {
                         if (placingType == 4) {
                             // Finished drawing route so now place route							
                             System.out.println("Done with placing path");
-                            Route route = new Route("New Path", pathPositions, 0, 0);
-                            addBasicPath(route.getPathCoords());
+                            Route route = new Route("New Path", pathPositions, 0, 0,-1, null);
+                            //
+                            route.setPolyline(route.getPathCoords(), 300);
+                            MeasureTool measure = new MeasureTool(wwd);
+                    		measure.setController(new MeasureToolController());
+                    		measure.getUnitsFormat().setLengthUnits(UnitsFormat.KILOMETERS);
+                            route.getPolyline().setColor(Color.RED);
+                            route.getPolyline().setLineWidth(100);
+                            route.getPolyline().setFollowTerrain(true);
+                            measure.setMeasureShape(route.getPolyline());
+                    		
+                            //int pos = addBasicPath();
+                            //route.setPos(pos);
                             pathPositions = new ArrayList<Position>();
+                            //addBasicPath(pathPositions);
+                            
+                            route.setPos(wwd.getModel().getLayers().size()-1);
                             addObjectToAddedList("Route", route);
                             addedObjectsList.validate();
                             annotationlayer.removeAllAnnotations();
@@ -1961,18 +2313,22 @@ public class Menus implements ActionListener, ItemListener {
                     // Create and place symbol class
                     if (placingType == 1) {
                         System.out.println("Placing");
+                        int pos =  wwd.getModel().getLayers().size();
                         addTacticalSymbols(latitude, longitude, elevation, selectedMenuPath, "MIL-STD-2525 Tactical Symbol", "My Symbol Layer");
                         System.out.println("Now placing new symbol = " + selectedMenuPath);
-                        GenericSymbology genericSymbology = new GenericSymbology("New Generic Symbology", "", selectedMenuPath, .5, 1, true, "", "", Position.fromDegrees(latitude, longitude, altitude), new GeoZone("", "", Position.fromDegrees(0, 0), 0));
+                        GenericSymbology genericSymbology = new GenericSymbology("New Generic Symbology", "", selectedMenuPath, .5, 1, true, "", "", Position.fromDegrees(latitude, longitude, altitude), new GeoZone("", "", Position.fromDegrees(0, 0), 0,addedObjectArray.length),pos);
                         addObjectToAddedList("GenericSymbology", genericSymbology);
                         annotationlayer.removeAllAnnotations();
                         placingType = 0;
                     } else if (placingType == 6) {
+                    	
                         System.out.println("Placing");
+                        int pos =  wwd.getModel().getLayers().size();
                         addTacticalSymbols(latitude, longitude, elevation, selectedMenuPath, "MIL-STD-2525 Tactical Symbol", "My Symbol Layer");
-                        GenericSymbology genericSymbology = new GenericSymbology("New Generic Symbology", "", selectedMenuPath, .5, 1, true, "", "", Position.fromDegrees(latitude, longitude, altitude), new GeoZone("", "", Position.fromDegrees(0, 0), 0));
-                        MecialSymbology medicalSymbology = new MecialSymbology(new ArrayList<Specialty>(), genericSymbology, "", "");
+                        GenericSymbology genericSymbology = new GenericSymbology("New Generic Symbology", "", selectedMenuPath, .5, 1, true, "", "", Position.fromDegrees(latitude, longitude, altitude), new GeoZone("", "", Position.fromDegrees(0, 0), 0,addedObjectArray.length),-1);
+                        MecialSymbology medicalSymbology = new MecialSymbology(new ArrayList<Specialty>(), genericSymbology, "", "",pos);
                         addObjectToAddedList("MedicalSymbology", medicalSymbology);
+                        
                         System.out.println("Selected menu = " + selectedMenuPath);
                         annotationlayer.removeAllAnnotations();
                         placingType = 0;
@@ -1999,16 +2355,18 @@ public class Menus implements ActionListener, ItemListener {
                     } 
                     // Create and place Geo zone class
                     else if (placingType == 3) {
-                        placeGeoZone(latitude, longitude, 50000);
-                        GeoZone geoZone = new GeoZone("New GeoZone", "", Position.fromDegrees(latitude, longitude), 50000.0);
+                        int pos = placeGeoZone(latitude, longitude, 50000);
+                        GeoZone geoZone = new GeoZone("New GeoZone", "", Position.fromDegrees(latitude, longitude), 50000.0,pos);
                         addObjectToAddedList("GeoZone", geoZone);
+                        System.out.println(addedObjectArray.length);
                         placingType = 0;
                     } 
+                    
                     // Create and place route class
                     else if (placingType == 4) {
                         // First corner
                     	Polyline routepolyline = new Polyline();
-               	        lineBuilder = new LineBuilder(wwd, routelayer, routepolyline);        
+               	        //lineBuilder = new LineBuilder(wwd, routelayer, routepolyline);        
                         if (pathPositions.size() == 0) {
                             // Reset array
                             pathPositions = new ArrayList<Position>();
@@ -2025,21 +2383,26 @@ public class Menus implements ActionListener, ItemListener {
                     } 
                     // Create and place casualty
                     else if (placingType == 5) {
+                    	int pos =  wwd.getModel().getLayers().size();
                         addTacticalSymbols(latitude, longitude, altitude, "SFXPxxxxxx--xxG", "POI", "POI Layer");
-                        POI poi = new POI("New POI", "New POI", "", "", 0, "", "", new ArrayList<Casualty>(), "", "");
+                        POI poi = new POI("New POI", "New POI", "", "", 0, "", "", new ArrayList<Casualty>(), "", "",pos);
                         addObjectToAddedList("POI", poi);
                         
                     }
-                    // Create and place Airspace BOX
+		    // Create and place Airspace BOX
                     else if (placingType == PlacementType.AIRSPACE_BOX) {
                     	
-                    	ArrayList<Position> pos = new ArrayList<Position>();
-                    	while (pos.size() <= 4) {
-                    		System.out.println("Pos array size: " + pos.size());
-                    		pos.add(Position.fromDegrees(latitude, longitude, 0));
+                    	if (pathPositions.size() == 0) {
+                    		pathPositions = new ArrayList<Position>();
+                    		pathPositions.add(Position.fromDegrees(latitude, longitude));
+                            System.out.println("Adding First Position");
+                    	} else if (pathPositions.size() >= 1) {
+                    		pathPositions.add(Position.fromDegrees(latitude, longitude));
+                    		System.out.println("Adding New Point");
                     	}
-                    	placingType = 0;
-                    	addAirspace(PlacementType.AIRSPACE_BOX, pos);
+
+                    	//placingType = 0;
+                    	//addAirspace(PlacementType.AIRSPACE_BOX, pathPositions);
                     	
                     	annotationlayer.removeAllAnnotations();
                 	}
@@ -2065,7 +2428,7 @@ public class Menus implements ActionListener, ItemListener {
 
     }
 
-    /** Method for adding airspaces
+/** Method for adding airspaces
      * 
      * @param type
      * @param pos
@@ -2083,6 +2446,19 @@ public class Menus implements ActionListener, ItemListener {
 		
     	switch (type) {
     	case PlacementType.AIRSPACE_BOX:
+    		
+    		Polygon airPoly = new Polygon(pos);
+    		airPoly.setAttributes(attr);
+    		airPoly.setAltitudes(500, 1500);
+
+    		layer.addRenderable(airPoly);
+    		
+    		AirSpace boxSpace = new AirSpace(type, pos, 500, 1500);
+    		addObjectToAddedList("AirSpace", boxSpace);
+    		
+    		wwd.getModel().getLayers().add(layer);
+    		wwd.updateUI();
+    		
     		break;
     	case PlacementType.AIRSPACE_CYLINDER:
     		Position cylinderPos = pos.get(0);
@@ -2095,6 +2471,10 @@ public class Menus implements ActionListener, ItemListener {
     		airCylinder.setAltitudes(500, 1500);
     		airCylinder.setAttributes(attr);
     		layer.addRenderable(airCylinder);
+    		
+    		AirSpace cylinderSpace = new AirSpace(type,pos,500,1500);
+    		addObjectToAddedList("AirSpace",cylinderSpace);
+    		
     		wwd.getModel().getLayers().add(layer);
     		wwd.updateUI();
     		
@@ -2117,7 +2497,7 @@ public class Menus implements ActionListener, ItemListener {
 		
 		measure.setMeasureShape(line);
 		measure.setShowAnnotation(true);
-
+		
 		System.out.println("MEASUREMENT = " + measure.getLength()/1000 + " km ");
 
 		
@@ -2267,13 +2647,14 @@ public class Menus implements ActionListener, ItemListener {
     }
 
     //Adds object to the object list on the left
-    private static void addObjectToAddedList(String name, Object object) {
+    private static int addObjectToAddedList(String name, Object object) {
         CreatedObject[] tempArray = addedObjectArray;
         addedObjectArray = new CreatedObject[addedObjectArray.length + 1];
         System.arraycopy(tempArray, 0, addedObjectArray, 0, addedObjectArray.length - 1);
         addedObjectArray[addedObjectArray.length - 1] = new CreatedObject(name, object);
 
         addedObjectsList.setListData(addedObjectArray);
+        return addedObjectArray.length - 1;
     }
 
     //Replaces an object to in object list on the left
@@ -2446,7 +2827,7 @@ public class Menus implements ActionListener, ItemListener {
         BufferedReader br = null;
         String line = "";
         String cvsSplitBy = ",";
-        map = new HashMap<>();
+        map = new HashMap<String, String>();
         try {
             br = new BufferedReader(new FileReader(symbolLinkFile));
             while ((line = br.readLine()) != null) {

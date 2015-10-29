@@ -14,6 +14,7 @@ public class POI {
 	private ArrayList<Casualty> casualties;
 	private String urgency;
 	private String comments;
+	private int Pos;
 	
 	public POI()
 	{
@@ -27,9 +28,10 @@ public class POI {
 		this.setCasualties(new ArrayList<Casualty>());
 		this.setUrgency("");
 		this.setComments("");
+		
 	}
 	
-	public POI(String poiID, String poiName, String description, String enemyTac, int casualtyNumber, String priority, String mobility, ArrayList<Casualty> casualties, String urgency, String comments)
+	public POI(String poiID, String poiName, String description, String enemyTac, int casualtyNumber, String priority, String mobility, ArrayList<Casualty> casualties, String urgency, String comments, int Pos)
 	{
 		this.setPoiID(poiID);
 		this.setPoiName(poiName);
@@ -41,6 +43,15 @@ public class POI {
 		this.setCasualties(casualties);
 		this.setUrgency(urgency);
 		this.setComments(comments);
+		this.setPos(Pos);
+	}
+
+	public int getPos() {
+		return Pos;
+	}
+
+	public void setPos(int pos) {
+		Pos = pos;
 	}
 
 	public String getPoiID() {

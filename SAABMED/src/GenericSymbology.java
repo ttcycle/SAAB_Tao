@@ -15,6 +15,7 @@ public class GenericSymbology {
 	private Position position;
 	private GeoZone geoZone;
 	private String OPName;
+	private int Pos;
 	
 	public GenericSymbology()
 	{
@@ -31,7 +32,7 @@ public class GenericSymbology {
 		this.setOPName("");
 	}
 	
-	public GenericSymbology(String sID, String type, String codeName, double size, double opacity, boolean visible, String comments, String urgency, Position position, GeoZone geoZone)
+	public GenericSymbology(String sID, String type, String codeName, double size, double opacity, boolean visible, String comments, String urgency, Position position, GeoZone geoZone, int Pos)
 	{
 		this.setsID(sID);
 		this.setType(type);
@@ -44,6 +45,15 @@ public class GenericSymbology {
 		this.setPosition(position);
 		this.setGeoZone(geoZone);
 		this.setOPName("");
+		this.setPos(Pos);
+	}
+
+	public int getPos() {
+		return Pos;
+	}
+
+	public void setPos(int pos) {
+		Pos = pos;
 	}
 
 	public String getOPName() {

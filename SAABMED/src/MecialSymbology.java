@@ -8,8 +8,16 @@ public class MecialSymbology {
 	private GenericSymbology symbol;
 	private String comments;
 	private String urgency;
+	private int Pos;
 	
-	
+	public int getPos() {
+		return Pos;
+	}
+
+	public void setPos(int pos) {
+		Pos = pos;
+	}
+
 	public MecialSymbology()
 	{
 		this.setSpecialities(new ArrayList<Specialty>());
@@ -18,12 +26,13 @@ public class MecialSymbology {
 		this.setUrgency("");
 	}
 	
-	public MecialSymbology(ArrayList<Specialty> specialities, GenericSymbology symbol, String comments, String urgency)
+	public MecialSymbology(ArrayList<Specialty> specialities, GenericSymbology symbol, String comments, String urgency, int Pos)
 	{
 		this.setSpecialities(specialities);
 		this.setSymbol(symbol);
 		this.setComments(comments);
 		this.setUrgency(urgency);
+		this.setPos(Pos);
 	}
 
 	public ArrayList<Specialty> getSpecialities() {

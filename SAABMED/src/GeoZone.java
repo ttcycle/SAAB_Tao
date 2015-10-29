@@ -13,6 +13,7 @@ public class GeoZone {
 	private String type;
 	private double radius;
 	private Position area;
+	private int Pos;
 	
 	GeoZone()
 	{
@@ -22,12 +23,21 @@ public class GeoZone {
 		this.setArea(Position.fromDegrees(0, 0));
 	}
 	
-	GeoZone(String id, String type,Position area, double radius)
+	public int getPos() {
+		return Pos;
+	}
+
+	public void setPos(int pos) {
+		Pos = pos;
+	}
+
+	GeoZone(String id, String type,Position area, double radius,int Pos)
 	{
 		this.setGeoZoneID(id);
 		this.setType(type);
 		this.setRadius(radius);
 		this.setArea(area);
+		this.setPos(Pos);
 	}
 
 	public String getType() {
