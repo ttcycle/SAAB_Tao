@@ -2727,6 +2727,8 @@ private static void createGenShapeDetails(final GenShape as) {
                         addTacticalSymbols(latitude, longitude, altitude, "SFXPxxxxxx--xxG", "POI", "POI Layer");
                         POI poi = new POI("New POI", "New POI", "", "", 0, "", "", new ArrayList<Casualty>(), "", "",pos);
                         addObjectToAddedList("POI", poi);
+                        annotationlayer.removeAllAnnotations();
+                        placingType = 0;
                         
                     }
 		    // Create and place Airspace BOX
