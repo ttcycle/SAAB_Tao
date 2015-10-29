@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 //Necessary swing imports
@@ -432,14 +433,29 @@ public class Menus implements ActionListener, ItemListener {
         //menuitems
         JMenuItem airspaceCylinder = new JMenuItem("Cylinder");
         JMenuItem airspaceCube = new JMenuItem("Cube");
+        
+        
+        
         airspaceCylinder.addActionListener(this);
         airspaceCube.addActionListener(this);
         
         airSpace.add(airspaceCube);
         airSpace.add(airspaceCylinder);
         
-        menuSelect.add(airSpace);
         
+        
+        JMenu shapes = new JMenu("Shapes");
+        JMenuItem shapesCylinder = new JMenuItem("shapeCylinder");
+        JMenuItem shapesCube = new JMenuItem("shapeCube");
+        shapesCylinder.addActionListener(this);
+        shapesCube.addActionListener(this);
+        
+        shapes.add(shapesCube);
+        shapes.add(shapesCylinder);
+        
+        
+        menuSelect.add(airSpace);
+        menuSelect.add(shapes);
         
         //Add separator
         ((JMenu) menuSelect).addSeparator();
@@ -589,6 +605,21 @@ public class Menus implements ActionListener, ItemListener {
         	createAnnotation("Cylinder Airspace Selected - Click to Place");
         }
         
+     // Cube Shape
+        if (e.getActionCommand().toString().endsWith("shapeCube")) {
+        	System.out.println("CUBE SHAPE SELECTED");
+        	placingType = PlacementType.SHAPE_BOX;
+        	createAnnotation("Cube Selected - Click to Place");
+        }
+        
+        // Cylinder Shape
+        if (e.getActionCommand().toString().endsWith("shapeCylinder")) {
+        	System.out.println("CYLINDER SHAPE SELECTED");
+        	placingType = PlacementType.SHAPE_CYLIDNER;
+        	createAnnotation("Cylinder Selected - Click to Place");
+        }
+        
+        
         // Exit
         if (e.getActionCommand().toString().endsWith("Exit")) {
         	System.exit(0);
@@ -733,6 +764,16 @@ public class Menus implements ActionListener, ItemListener {
 					POI tempPOI = addedObjectArray[addedObjectsList.getSelectedIndex()].getPoi();
 					System.out.println("removing POI" + tempPOI.getPos()+ "   " + wwd.getModel().getLayers().size());
 					wwd.getModel().getLayers().remove(tempPOI.getPos());
+				}
+				else if(sw.contains("AirSpace")){
+					AirSpace tempAS = addedObjectArray[addedObjectsList.getSelectedIndex()].getAs();
+					System.out.println("removing Airspace" + tempAS.getPos()+ "   " + wwd.getModel().getLayers().size());
+					wwd.getModel().getLayers().remove(tempAS.getPos());
+				}
+				else if(sw.contains("GenShape")){
+					GenShape tempGS = addedObjectArray[addedObjectsList.getSelectedIndex()].getGS();
+					System.out.println("removing Airspace" + tempGS.getPos()+ "   " + wwd.getModel().getLayers().size());
+					wwd.getModel().getLayers().remove(tempGS.getPos());
 				}
 				
 				copyList.remove(addedObjectsList.getSelectedValue());
@@ -1010,18 +1051,15 @@ private static void createAirspaceDetails(final AirSpace as) {
 						 tempPos = new Position(lat.fromDegrees(Double.parseDouble(coords[1])), lon.fromDegrees(Double.parseDouble(coords[2])), 0);
 						 
 						 tempASPos.add(tempPos);
-						 
-						
 					}
 					
-					
-					tempASPos.add(tailPos);
 					
 					tempAS.setASCoords(tempASPos);
 					
 					
 					CreatedObject newCO = new CreatedObject(addedObjectArray[addedObjectsList.getSelectedIndex()].getObjectType(), tempAS);
 					replaceObjectInAddedList(addedObjectsList.getSelectedIndex(), newCO);
+					System.out.println("Removing : " + tempAS.getPos() + ", " + wwd.getModel().getLayers().size());
 					wwd.getModel().getLayers().remove(tempAS.getPos());
 					addAirspace(tempAS);
 				}
@@ -1146,6 +1184,233 @@ private static void createAirspaceDetails(final AirSpace as) {
     }
 
 
+private static void createGenShapeDetails(final GenShape as) {
+	
+	final JPanel panel = new JPanel();
+	panel.setPreferredSize(new Dimension(300,800));
+	JLabel asNameLabel = new JLabel("Shape Name");
+	asNameLabel.setPreferredSize(new Dimension(150,25));
+	final JTextField asIDTextField = new JTextField();
+	asIDTextField.setPreferredSize(new Dimension(140,25));
+	asIDTextField.setText(as.getName());
+	
+	//add generic labels/fields
+	panel.add(asNameLabel);
+	panel.add(asIDTextField);
+	
+	switch (as.getType()) {
+	case PlacementType.SHAPE_BOX:
+		
+		LatLon[] p = new LatLon[as.getASCoords().size()];
+		int i = 0;
+		for (LatLon ll : as.getASCoords()) {
+			p[i] = as.getASCoords().get(i);
+			i++;
+		}
+		
+		JLabel asLatLonListLabel = new JLabel("Points(Lat,Lon)");
+		asLatLonListLabel.setPreferredSize(new Dimension(100, 25));
+		final JTextArea asLatLonPoints = new JTextArea();
+		asLatLonPoints.setPreferredSize(new Dimension(280, 150));
+		for (int j = 0; j < p.length; j++) {
+			LatLon item = p[j];
+			DecimalFormat df = new DecimalFormat("0.00####");
+			String lat = df.format(Double.parseDouble(item.latitude.toString().replace("°", "")));
+			String lon = df.format(Double.parseDouble(item.longitude.toString().replace("°", "")));
+			if (j == 0) {
+				asLatLonPoints.setText(asLatLonPoints.getText()+"Point"+j+" "+lat+" " +lon);
+			}
+			else {
+				asLatLonPoints.setText(asLatLonPoints.getText()+"\nPoint"+j+" "+lat+" " +lon);
+			}
+		}
+		
+		
+		//Upper Bounds
+		JLabel boxasUpperLabel = new JLabel("Upper Altitude");
+		boxasUpperLabel.setPreferredSize(new Dimension(150,25));
+		final JTextField boxupperTextField = new JTextField();
+		boxupperTextField.setPreferredSize(new Dimension(140,25));
+		boxupperTextField.setText(Double.toString(as.getUpper()));
+		    		
+		//Lower Bounds
+		JLabel boxasLowerLabel = new JLabel("Lower Altitude");
+		boxasLowerLabel.setPreferredSize(new Dimension(150,25));
+		final JTextField boxlowerTextField = new JTextField();
+		boxlowerTextField.setPreferredSize(new Dimension(140,25));
+		boxlowerTextField.setText(Double.toString(as.getLower()));
+
+		
+		
+		//apply button
+		JButton boxapplyButton = new JButton();
+		boxapplyButton.setText("Apply");
+		boxapplyButton.setPreferredSize(new Dimension(300, 25));
+		boxapplyButton.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				System.out.println("Apply Pressed");
+				GenShape tempAS = addedObjectArray[addedObjectsList.getSelectedIndex()].getGS();
+				tempAS.setName(asIDTextField.getText());
+				tempAS.setLower(Double.parseDouble(boxlowerTextField.getText()));
+				tempAS.setUpper(Double.parseDouble(boxupperTextField.getText()));
+				
+				String lines[] = asLatLonPoints.getText().split("\\r?\\n");
+				ArrayList<Position> tempASPos = new ArrayList<Position>();
+				
+				int count = 0;
+				
+				Angle lat = null;
+				Angle lon = null;
+				
+				Position tailPos = null;
+				
+				for (String item : lines) {
+					Position tempPos;
+					
+					String coords[] = item.split(" ");
+					 if (count == 0) {
+						 tailPos = new Position(lat.fromDegrees(Double.parseDouble(coords[1])), lon.fromDegrees(Double.parseDouble(coords[2])), 0);
+					 }
+					
+					 tempPos = new Position(lat.fromDegrees(Double.parseDouble(coords[1])), lon.fromDegrees(Double.parseDouble(coords[2])), 0);
+					 
+					 tempASPos.add(tempPos);
+					 
+					
+				}
+				
+				
+				//tempASPos.add(tailPos);
+				
+				tempAS.setASCoords(tempASPos);
+				
+				
+				CreatedObject newCO = new CreatedObject(addedObjectArray[addedObjectsList.getSelectedIndex()].getObjectType(), tempAS);
+				replaceObjectInAddedList(addedObjectsList.getSelectedIndex(), newCO);
+				wwd.getModel().getLayers().remove(tempAS.getPos());
+				addShape(tempAS);
+			}
+			
+		});
+		
+		
+		
+		panel.add(asLatLonListLabel);
+		panel.add(asLatLonPoints);
+		panel.add(boxasUpperLabel);
+		panel.add(boxupperTextField);
+		panel.add(boxasLowerLabel);
+		panel.add(boxlowerTextField);
+		panel.add(boxapplyButton);
+		
+		
+		
+		break;
+	case PlacementType.SHAPE_CYLIDNER:
+		
+		//Center position
+		JLabel asLatLabel = new JLabel("Latitude");
+		asLatLabel.setPreferredSize(new Dimension(150,25));
+		JLabel asLonLabel = new JLabel("Longitude");
+		asLonLabel.setPreferredSize(new Dimension(150,25));
+		final JTextField latTextField = new JTextField();
+		latTextField.setPreferredSize(new Dimension(140, 25));
+		latTextField.setText(as.getASCoords().get(0).getLatitude().toString());
+		final JTextField lonTextField = new JTextField();
+		lonTextField.setPreferredSize(new Dimension(140, 25));
+		lonTextField.setText(as.getASCoords().get(0).getLongitude().toString());
+		
+		//Radius
+		JLabel asRadiusLabel = new JLabel("Radius");
+		asRadiusLabel.setPreferredSize(new Dimension(150,25));
+		final JTextField radiusTextField = new JTextField();
+		radiusTextField.setPreferredSize(new Dimension(140, 25));
+		radiusTextField.setText(Double.toString(as.getRadius()));
+		
+		//Upper Bounds
+		JLabel asUpperLabel = new JLabel("Upper Altitude");
+		asUpperLabel.setPreferredSize(new Dimension(150,25));
+		final JTextField upperTextField = new JTextField();
+		upperTextField.setPreferredSize(new Dimension(140,25));
+		upperTextField.setText(Double.toString(as.getUpper()));
+		    		
+		//Lower Bounds
+		JLabel asLowerLabel = new JLabel("Lower Altitude");
+		asLowerLabel.setPreferredSize(new Dimension(150,25));
+		final JTextField lowerTextField = new JTextField();
+		lowerTextField.setPreferredSize(new Dimension(140,25));
+		lowerTextField.setText(Double.toString(as.getLower()));
+		
+		
+		//apply button
+		JButton cylapplyButton = new JButton();
+		cylapplyButton.setText("Apply");
+		cylapplyButton.setPreferredSize(new Dimension(300, 25));
+		cylapplyButton.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				System.out.println("Apply Pressed");
+				ArrayList<Position> tempASCoords = new ArrayList<Position>();
+				// TODO Finish ApplyButton Action Listener for Cylinder Airspace editing
+				GenShape tempAS = addedObjectArray[addedObjectsList.getSelectedIndex()].getGS();
+				tempAS.setName(asIDTextField.getText());
+				
+				Angle Lat = null;
+				Angle Lon = null;
+				DecimalFormat df = new DecimalFormat("0.00####");
+				
+    			String lat = df.format(Double.parseDouble(latTextField.getText().replace("°", "")));
+    			String lon = df.format(Double.parseDouble(lonTextField.getText().replace("°", "")));
+				
+				tempASCoords.add(new Position(Lat.fromDegrees(Double.parseDouble(lat)), Lon.fromDegrees(Double.parseDouble(lon)), 0));
+				
+				tempAS.setASCoords(tempASCoords);
+				tempAS.setRadius(Double.parseDouble(radiusTextField.getText()));
+				tempAS.setUpper(Double.parseDouble(upperTextField.getText()));
+				tempAS.setLower(Double.parseDouble(lowerTextField.getText()));
+				
+				
+				CreatedObject newCO = new CreatedObject(addedObjectArray[addedObjectsList.getSelectedIndex()].getObjectType(), tempAS);
+				replaceObjectInAddedList(addedObjectsList.getSelectedIndex(), newCO);
+				wwd.getModel().getLayers().remove(tempAS.getPos());
+				addShape(tempAS);
+			}
+			
+		});
+		
+		//add all labels/textfields
+		
+		panel.add(asLatLabel);
+		panel.add(latTextField);
+		panel.add(asLonLabel);
+		panel.add(lonTextField);
+		panel.add(asRadiusLabel);
+		panel.add(radiusTextField);
+		panel.add(asUpperLabel);
+		panel.add(upperTextField);
+		panel.add(asLowerLabel);
+		panel.add(lowerTextField);
+		panel.add(cylapplyButton);
+		
+		break;
+	}
+	
+	masterFrame.remove(rightMasterPanel);
+	rightMasterPanel = new JPanel();
+	rightMasterPanel.setPreferredSize(new Dimension(300,800));
+	rightMasterPanel.add(panel);
+	masterFrame.add(rightMasterPanel, java.awt.BorderLayout.EAST);
+	masterFrame.repaint();
+	masterFrame.validate();
+
+}
+
+
+
+
 	private static void checkThreatAreas() {
     	
 		//lines.clear();
@@ -1211,7 +1476,9 @@ private static void createAirspaceDetails(final AirSpace as) {
     	aa.setFont(Font.decode("Arial-BOLD-14"));
     	aa.setTextAlign(AVKey.CENTER);
     	ga.setAttributes(aa);
-    	ga.setMinActiveAltitude(5000);
+    	ga.setAltitudeMode(WorldWind.RELATIVE_TO_GROUND);
+    	ga.setMaxActiveAltitude(500000);
+
     	ga.setPickEnabled(false);
         globalAnnotationLayer.addAnnotation(ga);
     	
@@ -1250,13 +1517,19 @@ private static void createAirspaceDetails(final AirSpace as) {
         commentsTextArea.setPreferredSize(new Dimension(280, 150));
         for(int i = 0; i<ao.getAoCoords().size()-1;i++){
         	Point2D item = ao.getAoCoords().get(i);
+        	DecimalFormat df = new DecimalFormat("0.00####");
+        	String lat = df.format(item.getX());
+        	String lon = df.format(item.getY());
         	if(i==0){
-        		commentsTextArea.setText(commentsTextArea.getText()+"Point"+i+" "+item.getX()+" "+item.getY());
+        		commentsTextArea.setText(commentsTextArea.getText()+"Point"+i+" "+lat+" "+lon);
         	}
         	else
-        		commentsTextArea.setText(commentsTextArea.getText()+"\nPoint"+i+" "+item.getX()+" "+item.getY());
+        		commentsTextArea.setText(commentsTextArea.getText()+"\nPoint"+i+" "+lat+" "+lon);
         }
 
+
+
+        
         /*
         JLabel aoPoint1Label = new JLabel("NW Corner Point");
         aoPoint1Label.setPreferredSize(new Dimension(100, 25));
@@ -1973,7 +2246,7 @@ private static void createAirspaceDetails(final AirSpace as) {
                 	
                 }
                 
-                newCoords.add(tailPos);               
+                //newCoords.add(tailPos);               
                 
                 route.setPathCoords(newCoords);
                 
@@ -1996,8 +2269,7 @@ private static void createAirspaceDetails(final AirSpace as) {
                 measure.setMeasureShape(tempRoute.getPolyline());
                 
                 tempRoute.setPos(wwd.getModel().getLayers().size()-1);
-                addObjectToAddedList("Route", tempRoute);
-                addedObjectsList.validate();
+                //addObjectToAddedList("Route", tempRoute);
                                 
                 addBasicPath(newCoords);
 
@@ -2256,7 +2528,17 @@ private static void createAirspaceDetails(final AirSpace as) {
                         if (placingType == PlacementType.AIRSPACE_BOX) {
                         	System.out.println("Done with placing Airspace Box");
                         	AirSpace newAS = new AirSpace(placingType, pathPositions, 1500, 500);
-                        	addAirspace(newAS);
+                        	newAS.setPos(addAirspace(newAS));
+                        	addObjectToAddedList("AirSpace", newAS);
+                        	annotationlayer.removeAllAnnotations();
+                        	placingType = 0;
+                        }
+                        
+                        if (placingType == PlacementType.SHAPE_BOX) {
+                        	System.out.println("Done with placing shape Box");
+                        	GenShape newAS = new GenShape(placingType, pathPositions, 1500, 500);
+                        	newAS.setPos(addShape(newAS));
+                        	addObjectToAddedList("GenShape", newAS);
                         	annotationlayer.removeAllAnnotations();
                         	placingType = 0;
                         }
@@ -2465,17 +2747,50 @@ private static void createAirspaceDetails(final AirSpace as) {
                     	//annotationlayer.removeAllAnnotations();
                 	}
                     // Create and place Airspace CYLINDER
-                    else if (placingType == PlacementType.AIRSPACE_CYLINDER) { 
+                    else if (placingType == PlacementType.AIRSPACE_CYLINDER) {
+                    	
                     	ArrayList<Position> pos = new ArrayList<Position>();
                     	pos.add(clickedPosition);
                     	placingType = 0;
-                    	AirSpace newAS = new AirSpace(PlacementType.AIRSPACE_CYLINDER, pos, 5000, 1500, 500);
-                    	addAirspace(newAS);
-                    	
+                    	AirSpace newAS = new AirSpace(PlacementType.AIRSPACE_CYLINDER, pos, 5000, 1500, 500,-1);
+                    	newAS.setPos(addAirspace(newAS));
+                    	addObjectToAddedList("AirSpace" ,newAS);
                     	annotationlayer.removeAllAnnotations();
-                	} else {
+                	} 
+                    
+                    // Create and place shape BOX========================
+                    else if (placingType == PlacementType.SHAPE_BOX) {
+                    	
+                    	if (pathPositions.size() == 0) {
+                    		pathPositions = new ArrayList<Position>();
+                    		pathPositions.add(Position.fromDegrees(latitude, longitude));
+                            System.out.println("Adding First Position");
+                    	} else if (pathPositions.size() >= 1) {
+                    		pathPositions.add(Position.fromDegrees(latitude, longitude));
+                    		System.out.println("Adding New Point");
+                    	}
+
+                    	
+                	}
+                    // Create and place shape CYLINDER====================
+                    else if (placingType == PlacementType.SHAPE_CYLIDNER) {
+                    	
+                    	ArrayList<Position> pos = new ArrayList<Position>();
+                    	pos.add(clickedPosition);
+                    	placingType = 0;
+                    	GenShape newAS = new GenShape(PlacementType.SHAPE_CYLIDNER, pos, 5000, 1500, 500,-1);
+                    	addObjectToAddedList("GenShape", newAS);
+                    	newAS.setPos(addShape(newAS));
+                    	annotationlayer.removeAllAnnotations();
+                	} 
+                    
+                    
+                    else {
                         System.out.println("Nothing to place");
                     }
+                    
+                    
+                    
                     
                 }
 
@@ -2486,6 +2801,72 @@ private static void createAirspaceDetails(final AirSpace as) {
         }
 
     }
+    
+    
+    
+    public static int addShape(GenShape as) {
+    	RenderableLayer layer = new RenderableLayer();
+    	layer.setName("GenShape Layer");
+    	
+    	int type = as.getType();
+    	ArrayList<Position> pos = as.getASCoords();
+		double lower = as.getLower();
+		double upper = as.getUpper();
+    	double radius = as.getRadius();
+    	
+    	Random rnd = new Random();
+    	AirspaceAttributes attr = new BasicAirspaceAttributes();
+		attr.setOutlineMaterial(new Material(WWUtil.makeRandomColor(null)));
+		attr.setOutlineOpacity(0.5);
+		attr.setDrawInterior(true);
+		attr.setMaterial(new Material(WWUtil.makeRandomColor(null)));
+		attr.setOutlineWidth(2d);
+		attr.setOpacity(1);
+		
+    	switch (type) {
+    	case PlacementType.SHAPE_BOX:
+    		
+    		Polygon airPoly = new Polygon(pos);
+    		airPoly.setAttributes(attr);
+
+    		airPoly.setAltitudes(lower, upper);
+
+    		layer.addRenderable(airPoly);
+    		
+    		GenShape boxSpace = as;
+    		//boxSpace.setName("New Box shape");
+    		boxSpace.setPos(wwd.getModel().getLayers().size());
+    		//addObjectToAddedList("GenShape", boxSpace);
+    		
+    		wwd.getModel().getLayers().add(layer);
+    		wwd.updateUI();
+    		
+    		return wwd.getModel().getLayers().indexOf(layer, 0); 
+    	case PlacementType.SHAPE_CYLIDNER:
+    		Position cylinderPos = pos.get(0);
+    		LatLon cylinderLatLon = new LatLon(cylinderPos.latitude, cylinderPos.longitude);
+    		//take in first item in list as only single position is required
+    		//cylinder(pos,height,radius)
+    		CappedCylinder airCylinder = new CappedCylinder(cylinderLatLon, radius);
+    		
+    		//altitudes(lower, upper)
+    		airCylinder.setAltitudes(lower, upper);
+    		airCylinder.setAttributes(attr);
+    		layer.addRenderable(airCylinder);
+    		
+    		GenShape cylinderSpace = as;
+    		cylinderSpace.setPos(wwd.getModel().getLayers().size());
+    		//cylinderSpace.setName("New Cylinder shape");
+    		//addObjectToAddedList("GenShape",cylinderSpace);
+    		
+    		wwd.getModel().getLayers().add(layer);
+    		wwd.updateUI();
+    		
+    		return wwd.getModel().getLayers().indexOf(layer, 0);
+    	}
+		return -1;
+		
+	}
 
 /** Method for adding airspaces
      * 
@@ -2493,12 +2874,13 @@ private static void createAirspaceDetails(final AirSpace as) {
      * @param pos
      */
     
-    public static void addAirspace(AirSpace as) {
+    public static int addAirspace(AirSpace as) {
     	RenderableLayer layer = new RenderableLayer();
     	layer.setName("Airspace Layer");
     	
     	int type = as.getType();
     	ArrayList<Position> pos = as.getASCoords();
+    	String name = as.getName();
 		double lower = as.getLower();
 		double upper = as.getUpper();
     	double radius = as.getRadius();
@@ -2519,14 +2901,17 @@ private static void createAirspaceDetails(final AirSpace as) {
 
     		layer.addRenderable(airPoly);
     		
-    		AirSpace boxSpace = as;
-    		boxSpace.setName("New Box Airspace");
-    		addObjectToAddedList("AirSpace", boxSpace);
+    		//AirSpace boxSpace = as;
+    		AirSpace boxSpace = new AirSpace(type, pos, upper, lower);
+    		//boxSpace.setName("New Box Airspace");
+    		boxSpace.setPos(wwd.getModel().getLayers().size());
+    		//addObjectToAddedList("AirSpace", boxSpace);
     		
     		wwd.getModel().getLayers().add(layer);
     		wwd.updateUI();
     		
-    		break;
+    		return wwd.getModel().getLayers().indexOf(layer, 0); 
+    		
     	case PlacementType.AIRSPACE_CYLINDER:
     		Position cylinderPos = pos.get(0);
     		LatLon cylinderLatLon = new LatLon(cylinderPos.latitude, cylinderPos.longitude);
@@ -2539,15 +2924,18 @@ private static void createAirspaceDetails(final AirSpace as) {
     		airCylinder.setAttributes(attr);
     		layer.addRenderable(airCylinder);
     		
-    		AirSpace cylinderSpace = as;
-    		cylinderSpace.setName("New Cylinder Airspace");
-    		addObjectToAddedList("AirSpace",cylinderSpace);
+    		AirSpace cylinderSpace = new AirSpace(type,pos,radius,upper,lower,as.getPos());
+    		cylinderSpace.setPos(wwd.getModel().getLayers().size());
+    		//cylinderSpace.setName("New Cylinder Airspace");
+    		//addObjectToAddedList("AirSpace",cylinderSpace);
     		
     		wwd.getModel().getLayers().add(layer);
     		wwd.updateUI();
     		
-    		break;
+    		
+    		return wwd.getModel().getLayers().indexOf(layer, 0);
     	}
+		return -1;
 		
 	}
     
@@ -2765,6 +3153,10 @@ private static void createAirspaceDetails(final AirSpace as) {
         } else if (object.getObjectType() == "AirSpace") {
         	System.out.println("Setup Airspace Details");
         	createAirspaceDetails(object.getAs());
+        	masterFrame.validate();
+        }else if (object.getObjectType() == "GenShape") {
+        	System.out.println("Setup Shape Details");
+        	createGenShapeDetails(object.getGS());
         	masterFrame.validate();
         } else {
             //Nothing selected remove details view

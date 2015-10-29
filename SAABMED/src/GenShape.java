@@ -2,7 +2,7 @@ import java.util.ArrayList;
 
 import gov.nasa.worldwind.geom.Position;
 
-public class AirSpace {
+public class GenShape {
 
 	private int type;
 	private ArrayList<Position> ASCoords;
@@ -12,16 +12,16 @@ public class AirSpace {
 	
 
 
-	public AirSpace(int type, ArrayList<Position> pos, double upper, double lower) {
-		this.name = "New Box Airspace";
+	public GenShape(int type, ArrayList<Position> pos, double upper, double lower) {
+		this.name = "New Box Shape";
 		this.type = type;
 		this.ASCoords = pos;
 		this.upper = upper;
 		this.lower = lower;
 	}
 
-	public AirSpace(int type, ArrayList<Position> pos, double radius, double upper, double lower, int Pos) {
-		this.name = "New Cylinder Airspace";
+	public GenShape(int type, ArrayList<Position> pos, double radius, double upper, double lower, int Pos) {
+		this.name = "New Cylinder Shape";
 		this.type = type;
 		this.ASCoords = pos;
 		this.radius = radius;

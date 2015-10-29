@@ -9,6 +9,7 @@ public class CreatedObject {
 	private Route route;
 	private POI poi;
 	private AirSpace as; 
+	private GenShape GS;
 	
 	public CreatedObject()
 	{
@@ -95,6 +96,16 @@ public class CreatedObject {
 			this.setPoi(null);
 			this.setAs((AirSpace)object);
 		}
+		else if(objectType == "GenShape")
+		{
+			this.setAo(null);
+			this.setGeoZone(null);
+			this.setGenericSymbology(null);
+			this.setMedicalSymbology(null);
+			this.setRoute(null);
+			this.setPoi(null);
+			this.setGS((GenShape)object);
+		}
 	}
 	
 	public boolean hasGeoZone() {
@@ -134,6 +145,9 @@ public class CreatedObject {
 		}
 		else if(getObjectType() == "AirSpace") {
 			objectID = this.getAs().getName();
+		}
+		else if(getObjectType() == "GenShape") {
+			objectID = this.getGS().getName();
 		}
 		return objectID + " (" + getObjectType() + ")";
 	}
@@ -198,6 +212,14 @@ public class CreatedObject {
 		this.as = as;
 	}
 	
+	public GenShape getGS() {
+		return GS;
+	}
+
+	public void setGS(GenShape gS) {
+		GS = gS;
+	}
+
 	public AirSpace getAs() {
 		return as;
 	}
