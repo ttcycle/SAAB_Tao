@@ -5,22 +5,23 @@ import gov.nasa.worldwind.geom.Position;
 public class AirSpace {
 
 	private int type;
-	private ArrayList<Position> pos;
+	private ArrayList<Position> ASCoords;
 	private double upper, lower, radius;
 	private String name;
+	private int pos;
 	
 
 
 	public AirSpace(int type, ArrayList<Position> pos, double upper, double lower) {
 		this.type = type;
-		this.pos = pos;
+		this.ASCoords = pos;
 		this.upper = upper;
 		this.lower = lower;
 	}
 
 	public AirSpace(int type, ArrayList<Position> pos, double radius, double upper, double lower) {
 		this.type = type;
-		this.pos = pos;
+		this.ASCoords = pos;
 		this.radius = radius;
 		this.upper = upper;
 		this.lower = lower;
@@ -34,12 +35,12 @@ public class AirSpace {
 		this.type = type;
 	}
 
-	public ArrayList<Position> getPos() {
-		return pos;
+	public ArrayList<Position> getASCoords() {
+		return ASCoords;
 	}
 
-	public void setPos(ArrayList<Position> pos) {
-		this.pos = pos;
+	public void setASCoords(ArrayList<Position> pos) {
+		this.ASCoords = pos;
 	}
 
 	public double getUpper() {
@@ -73,4 +74,12 @@ public class AirSpace {
 		this.radius = radius;
 	}
 
+	public int getPos() {
+		return pos;
+	}
+
+	public void setPos(int pos) {
+		this.pos = pos;
+	}
+	
 }

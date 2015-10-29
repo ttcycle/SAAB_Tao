@@ -27,7 +27,8 @@ import javax.swing.SwingUtilities;
  */
 public class SplashScreen
 {
-	private static final URL DEFAULT_IMAGE_URL = SplashScreen.class.getResource("Saab_logo.png");
+	private static final URL DEFAULT_IMAGE_URL = SplashScreen.class.getResource("/Saab_logo.png");
+	
 
 	private BufferedImage image;
 	private JDialog dialog;
@@ -104,6 +105,7 @@ public class SplashScreen
 		}
 	}
 
+	
 	/**
 	 * Hide the splash screen when WorldWindow raises a rendering event.
 	 * 

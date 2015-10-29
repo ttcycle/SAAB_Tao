@@ -132,6 +132,9 @@ public class CreatedObject {
 		{
 			objectID = this.getPoi().getPoiID();
 		}
+		else if(getObjectType() == "AirSpace") {
+			objectID = this.getAs().getName();
+		}
 		return objectID + " (" + getObjectType() + ")";
 	}
 
